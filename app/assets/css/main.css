@@ -1,2 +1,16 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
+
+@theme static {
+  --color-coral-50: #fff3ee;
+  --color-coral-100: #ffe4d9;
+  --color-coral-200: #ffc9b3;
+  --color-coral-300: #ffa684;
+  --color-coral-400: #ff8b62;
+  --color-coral-500: #ff7f50;
+  --color-coral-600: #f2653a;
+  --color-coral-700: #d9502a;
+  --color-coral-800: #b23f20;
+  --color-coral-900: #8f331b;
+  --color-coral-950: #4d1b0e;
+}

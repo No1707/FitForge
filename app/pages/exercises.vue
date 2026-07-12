@@ -230,17 +230,6 @@ function getCategoryIcon(category: string) {
           <div>
             <h3 class="font-semibold text-lg mb-2">About This Exercise</h3>
             <p class="text-muted">{{ selectedExercise.description }}</p>
-            <UButton
-              :to="videoWatchUrl(selectedExercise.videoUrl)"
-              target="_blank"
-              label="Watch video tutorial"
-              icon="i-lucide-youtube"
-              trailing-icon="i-lucide-external-link"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              class="mt-4"
-            />
           </div>
 
           <!-- Muscles -->
@@ -274,6 +263,17 @@ function getCategoryIcon(category: string) {
                 <span class="text-muted">{{ instruction }}</span>
               </li>
             </ol>
+            <UButton
+              :to="videoWatchUrl(selectedExercise.videoUrl)"
+              target="_blank"
+              label="Watch video tutorial"
+              icon="i-lucide-youtube"
+              trailing-icon="i-lucide-external-link"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              class="mt-4"
+            />
           </div>
 
           <!-- Tips -->
