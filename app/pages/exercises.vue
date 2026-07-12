@@ -1,0 +1,301 @@
+<script setup lang="ts">
+import { exercises, categories, equipmentTypes, difficultyLevels, type Exercise } from '~/utils/exercises'
+
+const route = useRoute()
+
+const searchQuery = ref('')
+const selectedCategories = ref<string[]>(route.query.category ? [route.query.category.toString()] : [])
+const selectedEquipments = ref<string[]>([])
+const selectedDifficulties = ref<string[]>([])
+
+const selectedExercise = ref<Exercise | null>(null)
+const isModalOpen = ref(false)
+
+const filteredExercises = computed(() => {
+  return exercises.filter(exercise => {
+    const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      exercise.muscles.some(m => m.toLowerCase().includes(searchQuery.value.toLowerCase()))
+    const matchesCategory = selectedCategories.value.length === 0 || selectedCategories.value.includes(exercise.category)
+    const matchesEquipment = selectedEquipments.value.length === 0 || selectedEquipments.value.includes(exercise.equipment)
+    const matchesDifficulty = selectedDifficulties.value.length === 0 || selectedDifficulties.value.includes(exercise.difficulty)
+    return matchesSearch && matchesCategory && matchesEquipment && matchesDifficulty
+  })
+})
+
+const hasActiveFilters = computed(() =>
+  !!searchQuery.value || selectedCategories.value.length > 0 || selectedEquipments.value.length > 0 || selectedDifficulties.value.length > 0
+)
+
+function openExercise(exercise: Exercise) {
+  selectedExercise.value = exercise
+  isModalOpen.value = true
+}
+
+function clearFilters() {
+  searchQuery.value = ''
+  selectedCategories.value = []
+  selectedEquipments.value = []
+  selectedDifficulties.value = []
+}
+
+function toggleValue(list: string[], value: string) {
+  const index = list.indexOf(value)
+  if (index === -1) list.push(value)
+  else list.splice(index, 1)
+}
+
+const categoryButtons = categories.filter(c => c !== 'all')
+const equipmentButtons = equipmentTypes.filter(e => e !== 'all')
+const difficultyButtons = difficultyLevels.filter(d => d !== 'all')
+
+function getDifficultyColor(difficulty: string) {
+  switch (difficulty) {
+    case 'beginner': return 'success'
+    case 'intermediate': return 'warning'
+    case 'advanced': return 'error'
+    default: return 'neutral'
+  }
+}
+
+function videoWatchUrl(embedUrl: string) {
+  const videoId = embedUrl.split('/embed/')[1]
+  return `https://www.youtube.com/watch?v=${videoId}`
+}
+
+function getCategoryIcon(category: string) {
+  switch (category) {
+    case 'strength': return 'i-lucide-dumbbell'
+    case 'cardio': return 'i-lucide-heart-pulse'
+    case 'bodyweight': return 'i-lucide-person-standing'
+    case 'flexibility': return 'i-lucide-stretch-horizontal'
+    default: return 'i-lucide-activity'
+  }
+}
+</script>
+
+<template>
+  <div class="py-8">
+    <UContainer>
+      <div class="border-b border-default pb-6">
+        <h1 class="text-3xl font-bold">Exercise Library</h1>
+        <p class="mt-2 text-muted">
+          Browse our collection of exercises with detailed instructions and video demonstrations.
+        </p>
+      </div>
+
+      <!-- Filters -->
+      <div class="mt-8 space-y-4">
+        <div class="flex flex-col sm:flex-row gap-4 sm:items-center">
+          <UInput
+            v-model="searchQuery"
+            placeholder="Search exercises or muscles..."
+            icon="i-lucide-search"
+            size="lg"
+            class="flex-1"
+          />
+          <UButton
+            v-if="hasActiveFilters"
+            label="Clear Filters"
+            icon="i-lucide-x"
+            color="neutral"
+            variant="ghost"
+            @click="clearFilters"
+          />
+        </div>
+
+        <div class="space-y-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium text-muted w-24 shrink-0">Category</span>
+            <UButton
+              v-for="cat in categoryButtons"
+              :key="cat"
+              :label="cat.charAt(0).toUpperCase() + cat.slice(1)"
+              size="sm"
+              :color="selectedCategories.includes(cat) ? 'primary' : 'neutral'"
+              :variant="selectedCategories.includes(cat) ? 'solid' : 'outline'"
+              class="cursor-pointer"
+              @click="toggleValue(selectedCategories, cat)"
+            />
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium text-muted w-24 shrink-0">Equipment</span>
+            <UButton
+              v-for="eq in equipmentButtons"
+              :key="eq"
+              :label="eq.charAt(0).toUpperCase() + eq.slice(1)"
+              size="sm"
+              :color="selectedEquipments.includes(eq) ? 'primary' : 'neutral'"
+              :variant="selectedEquipments.includes(eq) ? 'solid' : 'outline'"
+              class="cursor-pointer"
+              @click="toggleValue(selectedEquipments, eq)"
+            />
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium text-muted w-24 shrink-0">Difficulty</span>
+            <UButton
+              v-for="diff in difficultyButtons"
+              :key="diff"
+              :label="diff.charAt(0).toUpperCase() + diff.slice(1)"
+              size="sm"
+              :color="selectedDifficulties.includes(diff) ? getDifficultyColor(diff) : 'neutral'"
+              :variant="selectedDifficulties.includes(diff) ? 'solid' : 'outline'"
+              class="cursor-pointer"
+              @click="toggleValue(selectedDifficulties, diff)"
+            />
+          </div>
+        </div>
+
+        <p class="text-muted text-sm">
+          Showing {{ filteredExercises.length }} of {{ exercises.length }} exercises
+        </p>
+      </div>
+
+      <!-- Exercise Grid -->
+      <div v-if="filteredExercises.length > 0" class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <UCard
+          v-for="exercise in filteredExercises"
+          :key="exercise.id"
+          class="cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+          @click="openExercise(exercise)"
+        >
+          <template #header>
+            <div class="flex flex-wrap gap-1.5">
+              <UBadge :color="getDifficultyColor(exercise.difficulty)" variant="subtle" size="md" class="capitalize">
+                {{ exercise.difficulty }}
+              </UBadge>
+              <UBadge color="primary" variant="subtle" size="md" class="capitalize">
+                <UIcon :name="getCategoryIcon(exercise.category)" class="size-4" />
+                {{ exercise.category }}
+              </UBadge>
+              <UBadge color="neutral" variant="subtle" size="md" class="capitalize">
+                {{ exercise.equipment }}
+              </UBadge>
+            </div>
+          </template>
+
+          <div>
+            <h3 class="font-semibold text-lg mb-2">{{ exercise.name }}</h3>
+            <p class="text-muted text-sm line-clamp-2">{{ exercise.description }}</p>
+          </div>
+
+          <template #footer>
+            <div class="flex flex-wrap gap-1">
+              <UBadge
+                v-for="muscle in exercise.muscles.slice(0, 3)"
+                :key="muscle"
+                color="neutral"
+                variant="subtle"
+                size="md"
+              >
+                {{ muscle }}
+              </UBadge>
+              <UBadge v-if="exercise.muscles.length > 3" color="neutral" variant="subtle" size="md">
+                +{{ exercise.muscles.length - 3 }}
+              </UBadge>
+            </div>
+          </template>
+        </UCard>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else class="mt-12 flex flex-col items-center text-center py-16">
+        <div class="p-4 rounded-full bg-elevated mb-4">
+          <UIcon name="i-lucide-search-x" class="size-8 text-muted" />
+        </div>
+        <h3 class="font-semibold text-lg">No exercises found</h3>
+        <p class="text-muted mt-1 mb-4">Try adjusting your filters or search query.</p>
+        <UButton label="Clear Filters" @click="clearFilters" />
+      </div>
+    </UContainer>
+
+    <!-- Exercise Detail Modal -->
+    <UModal v-model:open="isModalOpen" :title="selectedExercise?.name">
+      <template #body>
+        <div v-if="selectedExercise" class="space-y-6">
+          <!-- Info Badges -->
+          <div class="flex flex-wrap gap-2">
+            <UBadge :color="getDifficultyColor(selectedExercise.difficulty)" size="lg" class="capitalize">
+              {{ selectedExercise.difficulty }}
+            </UBadge>
+            <UBadge color="primary" variant="subtle" size="lg" class="capitalize">
+              <UIcon :name="getCategoryIcon(selectedExercise.category)" class="size-4 mr-1" />
+              {{ selectedExercise.category }}
+            </UBadge>
+            <UBadge color="neutral" variant="subtle" size="lg" class="capitalize">
+              {{ selectedExercise.equipment }}
+            </UBadge>
+          </div>
+
+          <!-- Description -->
+          <div>
+            <h3 class="font-semibold text-lg mb-2">About This Exercise</h3>
+            <p class="text-muted">{{ selectedExercise.description }}</p>
+            <UButton
+              :to="videoWatchUrl(selectedExercise.videoUrl)"
+              target="_blank"
+              label="Watch video tutorial"
+              icon="i-lucide-youtube"
+              trailing-icon="i-lucide-external-link"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              class="mt-4"
+            />
+          </div>
+
+          <!-- Muscles -->
+          <div>
+            <h3 class="font-semibold text-lg mb-2">Muscles Worked</h3>
+            <div class="flex flex-wrap gap-2">
+              <UBadge
+                v-for="muscle in selectedExercise.muscles"
+                :key="muscle"
+                color="primary"
+                variant="subtle"
+                size="lg"
+              >
+                {{ muscle }}
+              </UBadge>
+            </div>
+          </div>
+
+          <!-- Instructions -->
+          <div>
+            <h3 class="font-semibold text-lg mb-2">Instructions</h3>
+            <ol class="space-y-3">
+              <li
+                v-for="(instruction, index) in selectedExercise.instructions"
+                :key="index"
+                class="flex gap-3"
+              >
+                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                  {{ index + 1 }}
+                </span>
+                <span class="text-muted">{{ instruction }}</span>
+              </li>
+            </ol>
+          </div>
+
+          <!-- Tips -->
+          <UAlert
+            title="Pro Tips"
+            icon="i-lucide-lightbulb"
+            color="warning"
+            variant="subtle"
+          >
+            <template #description>
+              <ul class="list-disc list-inside space-y-1 mt-2">
+                <li v-for="tip in selectedExercise.tips" :key="tip">{{ tip }}</li>
+              </ul>
+            </template>
+          </UAlert>
+        </div>
+      </template>
+
+      <template #footer>
+        <UButton label="Close" color="neutral" variant="outline" @click="isModalOpen = false" />
+        <UButton label="Add to Program" icon="i-lucide-plus" to="/program" />
+      </template>
+    </UModal>
+  </div>
+</template>
