@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { exercises, categories, equipmentTypes, difficultyLevels, type Exercise } from '~/utils/exercises'
+import { exercises, categories, difficultyLevels, type Exercise } from '~/utils/exercises'
 
 const route = useRoute()
 
@@ -7,6 +7,7 @@ const searchQuery = ref('')
 const selectedCategories = ref<string[]>(route.query.category ? [route.query.category.toString()] : [])
 const selectedEquipments = ref<string[]>([])
 const selectedDifficulties = ref<string[]>([])
+const selectedMuscles = ref<string[]>([])
 
 const selectedExercise = ref<Exercise | null>(null)
 const isModalOpen = ref(false)
@@ -16,14 +17,22 @@ const filteredExercises = computed(() => {
     const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       exercise.muscles.some(m => m.toLowerCase().includes(searchQuery.value.toLowerCase()))
     const matchesCategory = selectedCategories.value.length === 0 || selectedCategories.value.includes(exercise.category)
-    const matchesEquipment = selectedEquipments.value.length === 0 || selectedEquipments.value.includes(exercise.equipment)
+    const matchesEquipment = selectedEquipments.value.length === 0 || selectedEquipments.value.some(label => {
+      const group = equipmentFilterGroups.find(g => g.label === label)
+      return group ? group.values.includes(exercise.equipment) : false
+    })
     const matchesDifficulty = selectedDifficulties.value.length === 0 || selectedDifficulties.value.includes(exercise.difficulty)
-    return matchesSearch && matchesCategory && matchesEquipment && matchesDifficulty
+    const matchesMuscle = selectedMuscles.value.length === 0 || selectedMuscles.value.some(label => {
+      const group = muscleFilterGroups.find(g => g.label === label)
+      return group ? group.values.some(v => exercise.muscles.includes(v)) : false
+    })
+    return matchesSearch && matchesCategory && matchesEquipment && matchesDifficulty && matchesMuscle
   })
 })
 
 const hasActiveFilters = computed(() =>
-  !!searchQuery.value || selectedCategories.value.length > 0 || selectedEquipments.value.length > 0 || selectedDifficulties.value.length > 0
+  !!searchQuery.value || selectedCategories.value.length > 0 || selectedEquipments.value.length > 0 ||
+  selectedDifficulties.value.length > 0 || selectedMuscles.value.length > 0
 )
 
 function openExercise(exercise: Exercise) {
@@ -36,6 +45,7 @@ function clearFilters() {
   selectedCategories.value = []
   selectedEquipments.value = []
   selectedDifficulties.value = []
+  selectedMuscles.value = []
 }
 
 function toggleValue(list: string[], value: string) {
@@ -45,8 +55,39 @@ function toggleValue(list: string[], value: string) {
 }
 
 const categoryButtons = categories.filter(c => c !== 'all')
-const equipmentButtons = equipmentTypes.filter(e => e !== 'all')
 const difficultyButtons = difficultyLevels.filter(d => d !== 'all')
+
+// Broader filter groupings so the filter row stays short - the detailed
+// muscle/equipment values are still shown as-is on exercise cards and in the modal.
+const muscleFilterGroups = [
+  { label: 'Chest', values: ['Chest'] },
+  { label: 'Back', values: ['Back', 'Lats', 'Upper Back', 'Lower Back', 'Traps'] },
+  { label: 'Shoulders', values: ['Shoulders', 'Rear Delts'] },
+  { label: 'Arms', values: ['Biceps', 'Triceps', 'Forearms'] },
+  { label: 'Core', values: ['Abs', 'Obliques', 'Core'] },
+  { label: 'Legs', values: ['Quadriceps', 'Hamstrings', 'Glutes', 'Calves', 'Adductors', 'Abductors', 'Hip Flexors'] },
+  { label: 'Full Body', values: ['Full Body'] }
+]
+const muscleButtons = muscleFilterGroups.map(g => g.label)
+
+const equipmentFilterGroups = [
+  { label: 'Barbell', values: ['barbell'] },
+  { label: 'Dumbbell', values: ['dumbbell'] },
+  { label: 'Machine', values: ['machine'] },
+  { label: 'Bodyweight', values: ['bodyweight'] },
+  { label: 'Kettlebell', values: ['kettlebell'] },
+  { label: 'Cable', values: ['cable'] },
+  { label: 'Bands', values: ['bands'] },
+  { label: 'Exercise Ball', values: ['exercise-ball'] },
+  { label: 'Other', values: ['ez-bar', 'landmine', 'trap-bar', 'plate', 'other'] },
+  { label: 'None', values: ['none'] }
+]
+const equipmentButtons = equipmentFilterGroups.map(g => g.label)
+
+function formatLabel(value: string) {
+  if (value === 'ez-bar') return 'EZ Bar'
+  return value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
 
 function getDifficultyColor(difficulty: string) {
   switch (difficulty) {
@@ -55,11 +96,6 @@ function getDifficultyColor(difficulty: string) {
     case 'advanced': return 'error'
     default: return 'neutral'
   }
-}
-
-function videoWatchUrl(embedUrl: string) {
-  const videoId = embedUrl.split('/embed/')[1]
-  return `https://www.youtube.com/watch?v=${videoId}`
 }
 
 function getCategoryIcon(category: string) {
@@ -109,7 +145,7 @@ function getCategoryIcon(category: string) {
             <UButton
               v-for="cat in categoryButtons"
               :key="cat"
-              :label="cat.charAt(0).toUpperCase() + cat.slice(1)"
+              :label="formatLabel(cat)"
               size="sm"
               :color="selectedCategories.includes(cat) ? 'primary' : 'neutral'"
               :variant="selectedCategories.includes(cat) ? 'solid' : 'outline'"
@@ -122,7 +158,7 @@ function getCategoryIcon(category: string) {
             <UButton
               v-for="eq in equipmentButtons"
               :key="eq"
-              :label="eq.charAt(0).toUpperCase() + eq.slice(1)"
+              :label="eq"
               size="sm"
               :color="selectedEquipments.includes(eq) ? 'primary' : 'neutral'"
               :variant="selectedEquipments.includes(eq) ? 'solid' : 'outline'"
@@ -135,12 +171,25 @@ function getCategoryIcon(category: string) {
             <UButton
               v-for="diff in difficultyButtons"
               :key="diff"
-              :label="diff.charAt(0).toUpperCase() + diff.slice(1)"
+              :label="formatLabel(diff)"
               size="sm"
               :color="selectedDifficulties.includes(diff) ? getDifficultyColor(diff) : 'neutral'"
               :variant="selectedDifficulties.includes(diff) ? 'solid' : 'outline'"
               class="cursor-pointer"
               @click="toggleValue(selectedDifficulties, diff)"
+            />
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium text-muted w-24 shrink-0">Muscles</span>
+            <UButton
+              v-for="muscle in muscleButtons"
+              :key="muscle"
+              :label="muscle"
+              size="sm"
+              :color="selectedMuscles.includes(muscle) ? 'primary' : 'neutral'"
+              :variant="selectedMuscles.includes(muscle) ? 'solid' : 'outline'"
+              class="cursor-pointer"
+              @click="toggleValue(selectedMuscles, muscle)"
             />
           </div>
         </div>
@@ -160,15 +209,15 @@ function getCategoryIcon(category: string) {
         >
           <template #header>
             <div class="flex flex-wrap gap-1.5">
-              <UBadge :color="getDifficultyColor(exercise.difficulty)" variant="subtle" size="md" class="capitalize">
-                {{ exercise.difficulty }}
+              <UBadge :color="getDifficultyColor(exercise.difficulty)" variant="subtle" size="md">
+                {{ formatLabel(exercise.difficulty) }}
               </UBadge>
-              <UBadge color="primary" variant="subtle" size="md" class="capitalize">
+              <UBadge color="primary" variant="subtle" size="md">
                 <UIcon :name="getCategoryIcon(exercise.category)" class="size-4" />
-                {{ exercise.category }}
+                {{ formatLabel(exercise.category) }}
               </UBadge>
-              <UBadge color="neutral" variant="subtle" size="md" class="capitalize">
-                {{ exercise.equipment }}
+              <UBadge color="neutral" variant="subtle" size="md">
+                {{ formatLabel(exercise.equipment) }}
               </UBadge>
             </div>
           </template>
@@ -214,15 +263,15 @@ function getCategoryIcon(category: string) {
         <div v-if="selectedExercise" class="space-y-6">
           <!-- Info Badges -->
           <div class="flex flex-wrap gap-2">
-            <UBadge :color="getDifficultyColor(selectedExercise.difficulty)" size="lg" class="capitalize">
-              {{ selectedExercise.difficulty }}
+            <UBadge :color="getDifficultyColor(selectedExercise.difficulty)" size="lg">
+              {{ formatLabel(selectedExercise.difficulty) }}
             </UBadge>
-            <UBadge color="primary" variant="subtle" size="lg" class="capitalize">
+            <UBadge color="primary" variant="subtle" size="lg">
               <UIcon :name="getCategoryIcon(selectedExercise.category)" class="size-4 mr-1" />
-              {{ selectedExercise.category }}
+              {{ formatLabel(selectedExercise.category) }}
             </UBadge>
-            <UBadge color="neutral" variant="subtle" size="lg" class="capitalize">
-              {{ selectedExercise.equipment }}
+            <UBadge color="neutral" variant="subtle" size="lg">
+              {{ formatLabel(selectedExercise.equipment) }}
             </UBadge>
           </div>
 
@@ -264,7 +313,7 @@ function getCategoryIcon(category: string) {
               </li>
             </ol>
             <UButton
-              :to="videoWatchUrl(selectedExercise.videoUrl)"
+              :to="selectedExercise.videoUrl"
               target="_blank"
               label="Watch video tutorial"
               icon="i-lucide-youtube"
