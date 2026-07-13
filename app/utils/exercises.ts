@@ -3934,6 +3934,19 @@ export const categories = ['all', 'strength', 'cardio', 'flexibility', 'bodyweig
 export const equipmentTypes = ['all', 'barbell', 'dumbbell', 'machine', 'bodyweight', 'kettlebell', 'cable', 'ez-bar', 'bands', 'plate', 'exercise-ball', 'landmine', 'trap-bar', 'other', 'none'] as const
 export const difficultyLevels = ['all', 'beginner', 'intermediate', 'advanced', 'none'] as const
 
+// Shared broad muscle-group buckets used by both the exercise browser filters
+// and the program generator, mapping each dominant body part to the detailed
+// muscle tags used on individual exercises.
+export const muscleFilterGroups = [
+  { label: 'Chest', values: ['Chest'] },
+  { label: 'Back', values: ['Back', 'Lats', 'Upper Back', 'Lower Back', 'Traps'] },
+  { label: 'Shoulders', values: ['Shoulders', 'Rear Delts'] },
+  { label: 'Arms', values: ['Biceps', 'Triceps', 'Forearms'] },
+  { label: 'Core', values: ['Abs', 'Obliques', 'Core'] },
+  { label: 'Legs', values: ['Quadriceps', 'Hamstrings', 'Glutes', 'Calves', 'Adductors', 'Abductors', 'Hip Flexors'] },
+  { label: 'Full Body', values: ['Full Body'] }
+] as const
+
 export type Category = typeof categories[number]
 export type Equipment = typeof equipmentTypes[number]
 export type Difficulty = typeof difficultyLevels[number]

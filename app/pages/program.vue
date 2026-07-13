@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { fitnessGoals, experienceLevels, equipmentOptions, muscleGroups, type ProgramFormData, type GeneratedProgram } from '~/utils/program-types'
+import { fitnessGoals, experienceLevels, equipmentOptions, splitPreferences, type ProgramFormData, type GeneratedProgram } from '~/utils/program-types'
+import { muscleFilterGroups } from '~/utils/exercises'
 import { generateProgram } from '~/utils/program-generator'
 
 const currentStep = ref(0)
@@ -21,8 +22,10 @@ const schema = z.object({
   experience: z.enum(['beginner', 'intermediate', 'advanced']),
   daysPerWeek: z.number().min(2).max(6),
   sessionDuration: z.number().min(30).max(120),
+  splitPreference: z.enum(['auto', 'full_body', 'upper_lower', 'push_pull_legs']),
   equipment: z.array(z.string()).min(1, 'Select at least one equipment type'),
-  focusAreas: z.array(z.string())
+  focusAreas: z.array(z.string()),
+  excludeAreas: z.array(z.string())
 })
 
 type Schema = z.output<typeof schema>
@@ -33,8 +36,10 @@ const state = reactive<ProgramFormData>({
   experience: 'beginner',
   daysPerWeek: 3,
   sessionDuration: 60,
+  splitPreference: 'auto',
   equipment: ['bodyweight'],
-  focusAreas: []
+  focusAreas: [],
+  excludeAreas: []
 })
 
 function nextStep() {
@@ -62,8 +67,10 @@ function startOver() {
   state.experience = 'beginner'
   state.daysPerWeek = 3
   state.sessionDuration = 60
+  state.splitPreference = 'auto'
   state.equipment = ['bodyweight']
   state.focusAreas = []
+  state.excludeAreas = []
 }
 
 const daysOptions = [
@@ -160,6 +167,13 @@ const durationOptions = [
               <UFormField name="sessionDuration" label="Session duration">
                 <USelect v-model="state.sessionDuration" :items="durationOptions" size="lg" />
               </UFormField>
+              <UFormField name="splitPreference" label="Preferred split">
+                <URadioGroup
+                  v-model="state.splitPreference"
+                  :items="splitPreferences.map(s => ({ value: s.value, label: s.label, description: s.description }))"
+                  class="space-y-3"
+                />
+              </UFormField>
             </div>
 
             <!-- Step 5: Equipment -->
@@ -173,13 +187,20 @@ const durationOptions = [
                 <UCheckboxGroup
                   v-model="state.equipment"
                   :items="equipmentOptions.map(e => ({ value: e.value, label: e.label }))"
-                  class="grid grid-cols-2 gap-3"
+                  class="grid grid-cols-2 sm:grid-cols-3 gap-3"
                 />
               </UFormField>
               <UFormField name="focusAreas" label="Focus areas (optional)" hint="Select muscle groups you want to prioritize">
                 <UCheckboxGroup
                   v-model="state.focusAreas"
-                  :items="muscleGroups.map(m => ({ value: m.value, label: m.label }))"
+                  :items="muscleFilterGroups.map(m => ({ value: m.label, label: m.label }))"
+                  class="grid grid-cols-3 gap-3"
+                />
+              </UFormField>
+              <UFormField name="excludeAreas" label="Areas to avoid (optional)" hint="Select muscle groups to skip, e.g. for an injury">
+                <UCheckboxGroup
+                  v-model="state.excludeAreas"
+                  :items="muscleFilterGroups.map(m => ({ value: m.label, label: m.label }))"
                   class="grid grid-cols-3 gap-3"
                 />
               </UFormField>

@@ -4,8 +4,10 @@ export interface ProgramFormData {
   experience: 'beginner' | 'intermediate' | 'advanced'
   daysPerWeek: number
   sessionDuration: number
+  splitPreference: 'auto' | 'full_body' | 'upper_lower' | 'push_pull_legs'
   equipment: string[]
   focusAreas: string[]
+  excludeAreas: string[]
 }
 
 export interface ProgramExercise {
@@ -42,20 +44,24 @@ export const experienceLevels = [
   { value: 'advanced', label: 'Advanced', description: 'Experienced lifter (3+ years)' }
 ] as const
 
-export const equipmentOptions = [
-  { value: 'barbell', label: 'Barbells' },
-  { value: 'dumbbell', label: 'Dumbbells' },
-  { value: 'kettlebell', label: 'Kettlebells' },
-  { value: 'machine', label: 'Machines' },
-  { value: 'cable', label: 'Cable Machine' },
-  { value: 'bodyweight', label: 'Bodyweight Only' }
+export const splitPreferences = [
+  { value: 'auto', label: 'No Preference', description: 'We will pick the best split for your schedule' },
+  { value: 'full_body', label: 'Full Body', description: 'Train your whole body every session' },
+  { value: 'upper_lower', label: 'Upper / Lower', description: 'Alternate between upper body and lower body days' },
+  { value: 'push_pull_legs', label: 'Push / Pull / Legs', description: 'Classic push, pull, and legs rotation' }
 ] as const
 
-export const muscleGroups = [
-  { value: 'chest', label: 'Chest' },
-  { value: 'back', label: 'Back' },
-  { value: 'shoulders', label: 'Shoulders' },
-  { value: 'arms', label: 'Arms' },
-  { value: 'legs', label: 'Legs' },
-  { value: 'core', label: 'Core' }
+export const equipmentOptions = [
+  { value: 'barbell', label: 'Barbell' },
+  { value: 'dumbbell', label: 'Dumbbell' },
+  { value: 'kettlebell', label: 'Kettlebell' },
+  { value: 'machine', label: 'Machine' },
+  { value: 'cable', label: 'Cable' },
+  { value: 'bodyweight', label: 'Bodyweight Only' },
+  { value: 'bands', label: 'Resistance Bands' },
+  { value: 'ez-bar', label: 'EZ Bar' },
+  { value: 'plate', label: 'Weight Plate' },
+  { value: 'exercise-ball', label: 'Exercise Ball' },
+  { value: 'landmine', label: 'Landmine' },
+  { value: 'trap-bar', label: 'Trap Bar' }
 ] as const

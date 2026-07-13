@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { exercises, categories, difficultyLevels, type Exercise } from '~/utils/exercises'
+import { exercises, categories, difficultyLevels, muscleFilterGroups, type Exercise } from '~/utils/exercises'
 
 const route = useRoute()
 
@@ -57,17 +57,8 @@ function toggleValue(list: string[], value: string) {
 const categoryButtons = categories.filter(c => c !== 'all')
 const difficultyButtons = difficultyLevels.filter(d => d !== 'all')
 
-// Broader filter groupings so the filter row stays short - the detailed
-// muscle/equipment values are still shown as-is on exercise cards and in the modal.
-const muscleFilterGroups = [
-  { label: 'Chest', values: ['Chest'] },
-  { label: 'Back', values: ['Back', 'Lats', 'Upper Back', 'Lower Back', 'Traps'] },
-  { label: 'Shoulders', values: ['Shoulders', 'Rear Delts'] },
-  { label: 'Arms', values: ['Biceps', 'Triceps', 'Forearms'] },
-  { label: 'Core', values: ['Abs', 'Obliques', 'Core'] },
-  { label: 'Legs', values: ['Quadriceps', 'Hamstrings', 'Glutes', 'Calves', 'Adductors', 'Abductors', 'Hip Flexors'] },
-  { label: 'Full Body', values: ['Full Body'] }
-]
+// Equipment bucket for the browser's filter row only - detailed equipment/muscle
+// values are still shown as-is on exercise cards and in the modal.
 const muscleButtons = muscleFilterGroups.map(g => g.label)
 
 const equipmentFilterGroups = [
