@@ -80,6 +80,11 @@ function formatLabel(value: string) {
   return value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
+function formatDifficulty(value: string) {
+  if (value === 'none') return 'Unrated'
+  return formatLabel(value)
+}
+
 function getDifficultyColor(difficulty: string) {
   switch (difficulty) {
     case 'beginner': return 'success'
@@ -162,7 +167,7 @@ function getCategoryIcon(category: string) {
             <UButton
               v-for="diff in difficultyButtons"
               :key="diff"
-              :label="formatLabel(diff)"
+              :label="formatDifficulty(diff)"
               size="sm"
               :color="selectedDifficulties.includes(diff) ? getDifficultyColor(diff) : 'neutral'"
               :variant="selectedDifficulties.includes(diff) ? 'solid' : 'outline'"
@@ -201,7 +206,7 @@ function getCategoryIcon(category: string) {
           <template #header>
             <div class="flex flex-wrap gap-1.5">
               <UBadge :color="getDifficultyColor(exercise.difficulty)" variant="subtle" size="md">
-                {{ formatLabel(exercise.difficulty) }}
+                {{ formatDifficulty(exercise.difficulty) }}
               </UBadge>
               <UBadge color="primary" variant="subtle" size="md">
                 <UIcon :name="getCategoryIcon(exercise.category)" class="size-4" />
@@ -255,7 +260,7 @@ function getCategoryIcon(category: string) {
           <!-- Info Badges -->
           <div class="flex flex-wrap gap-2">
             <UBadge :color="getDifficultyColor(selectedExercise.difficulty)" size="lg">
-              {{ formatLabel(selectedExercise.difficulty) }}
+              {{ formatDifficulty(selectedExercise.difficulty) }}
             </UBadge>
             <UBadge color="primary" variant="subtle" size="lg">
               <UIcon :name="getCategoryIcon(selectedExercise.category)" class="size-4 mr-1" />
