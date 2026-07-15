@@ -1,19 +1,23 @@
 <script setup lang="ts">
-const links = [
-  { label: 'Home', to: '/', icon: 'i-lucide-home' },
-  { label: 'Exercises', to: '/exercises', icon: 'i-lucide-dumbbell' },
-  { label: 'Build Program', to: '/program', icon: 'i-lucide-clipboard-list' },
-  { label: 'My Programs', to: '/programs', icon: 'i-lucide-user-round' }
-]
-
 const isMenuOpen = ref(false)
 const route = useRoute()
 const colorMode = useColorMode()
 const user = useSupabaseUser()
 
+const links = computed(() => [
+  { label: 'Home', to: '/', icon: 'i-lucide-home' },
+  { label: 'Exercises', to: '/exercises', icon: 'i-lucide-dumbbell' },
+  { label: 'Build Program', to: '/program', icon: 'i-lucide-clipboard-list' },
+  ...(user.value ? [{ label: 'My Programs', to: '/programs', icon: 'i-lucide-user-round' }] : [])
+])
+
 watch(() => route.path, () => {
   isMenuOpen.value = false
 })
+
+function isLinkActive(to: string) {
+  return to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(`${to}/`)
+}
 
 function toggleColorMode() {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
@@ -38,8 +42,8 @@ function toggleColorMode() {
               :to="link.to"
               :label="link.label"
               :icon="link.icon"
-              :color="route.path === link.to ? 'primary' : 'neutral'"
-              :variant="route.path === link.to ? 'soft' : 'ghost'"
+              :color="isLinkActive(link.to) ? 'primary' : 'neutral'"
+              :variant="isLinkActive(link.to) ? 'soft' : 'ghost'"
             />
           </nav>
 
@@ -90,8 +94,8 @@ function toggleColorMode() {
               :icon="link.icon"
               block
               class="justify-start"
-              :color="route.path === link.to ? 'primary' : 'neutral'"
-              :variant="route.path === link.to ? 'soft' : 'ghost'"
+              :color="isLinkActive(link.to) ? 'primary' : 'neutral'"
+              :variant="isLinkActive(link.to) ? 'soft' : 'ghost'"
             />
           </UContainer>
         </div>

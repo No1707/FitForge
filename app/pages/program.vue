@@ -7,10 +7,15 @@ import {
 } from '~/utils/program-types'
 import { muscleFilterGroups } from '~/utils/exercises'
 
+const user = useSupabaseUser()
+const { create: createProgram } = usePrograms()
+
 const currentStep = ref(0)
 const generatedProgram = ref<GeneratedProgram | null>(null)
 const programSource = ref<'ai' | 'fallback' | null>(null)
 const isGenerating = ref(false)
+const isSaving = ref(false)
+const saveError = ref<string | null>(null)
 const clarificationQuestions = ref<string[]>([])
 const clarificationAnswers = ref<string[]>([])
 const pendingFormData = ref<ProgramFormData | null>(null)
@@ -97,6 +102,27 @@ async function submitClarifications() {
     answer: clarificationAnswers.value[i] || ''
   }))
   await requestProgram(pendingFormData.value, clarifications)
+}
+
+async function saveProgram() {
+  if (!generatedProgram.value) return
+  isSaving.value = true
+  saveError.value = null
+  try {
+    const saved = await createProgram({
+      name: generatedProgram.value.name,
+      goal: generatedProgram.value.goal,
+      source: 'ai',
+      schedule: generatedProgram.value.schedule,
+      tips: generatedProgram.value.tips
+    })
+    await navigateTo(`/programs/${saved.id}`)
+  } catch (err) {
+    console.error('[program] save failed:', err)
+    saveError.value = 'Could not save your program. Please try again in a moment.'
+  } finally {
+    isSaving.value = false
+  }
 }
 
 function startOver() {
@@ -377,7 +403,28 @@ const durationOptions = [
           </template>
         </UAlert>
 
-        <div class="flex gap-4">
+        <UAlert
+          v-if="saveError"
+          color="error"
+          variant="subtle"
+          icon="i-lucide-alert-circle"
+          :description="saveError"
+        />
+
+        <div class="flex flex-wrap gap-4">
+          <UButton
+            v-if="user"
+            label="Save Program"
+            icon="i-lucide-save"
+            :loading="isSaving"
+            @click="saveProgram"
+          />
+          <UButton
+            v-else
+            label="Log in to save"
+            icon="i-lucide-log-in"
+            to="/login"
+          />
           <UButton
             label="Start Over"
             color="neutral"
@@ -387,6 +434,8 @@ const durationOptions = [
           />
           <UButton
             label="Browse Exercises"
+            color="neutral"
+            variant="outline"
             to="/exercises"
             icon="i-lucide-dumbbell"
           />
