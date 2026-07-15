@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { fitnessGoals, experienceLevels, equipmentOptions, splitPreferences, type ProgramFormData, type GeneratedProgram } from '~/utils/program-types'
+import {
+  fitnessGoals, experienceLevels, equipmentOptions, splitPreferences,
+  type ProgramFormData, type GeneratedProgram, type ClarificationQA, type GenerateProgramResponseBody
+} from '~/utils/program-types'
 import { muscleFilterGroups } from '~/utils/exercises'
-import { generateProgram } from '~/utils/program-generator'
 
 const currentStep = ref(0)
 const generatedProgram = ref<GeneratedProgram | null>(null)
+const programSource = ref<'ai' | 'fallback' | null>(null)
+const isGenerating = ref(false)
+const clarificationQuestions = ref<string[]>([])
+const clarificationAnswers = ref<string[]>([])
+const pendingFormData = ref<ProgramFormData | null>(null)
 
 const steps = [
   { title: 'Personal Info', description: 'Tell us about yourself', icon: 'i-lucide-user' },
@@ -18,7 +25,7 @@ const steps = [
 
 const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  goal: z.enum(['muscle_building', 'fat_loss', 'strength', 'endurance', 'general_fitness']),
+  goals: z.array(z.enum(['muscle_building', 'fat_loss', 'strength', 'endurance', 'general_fitness'])).min(1, 'Select at least one goal'),
   experience: z.enum(['beginner', 'intermediate', 'advanced']),
   daysPerWeek: z.number().min(2).max(6),
   sessionDuration: z.number().min(30).max(120),
@@ -32,7 +39,7 @@ type Schema = z.output<typeof schema>
 
 const state = reactive<ProgramFormData>({
   name: '',
-  goal: 'muscle_building',
+  goals: ['muscle_building'],
   experience: 'beginner',
   daysPerWeek: 3,
   sessionDuration: 60,
@@ -54,16 +61,53 @@ function prevStep() {
   }
 }
 
+async function requestProgram(formData: ProgramFormData, clarifications?: ClarificationQA[]) {
+  isGenerating.value = true
+  try {
+    const response = await $fetch<GenerateProgramResponseBody>('/api/generate-program', {
+      method: 'POST',
+      body: { formData, clarifications }
+    })
+
+    if (response.status === 'needs_clarification') {
+      pendingFormData.value = formData
+      clarificationQuestions.value = response.questions
+      clarificationAnswers.value = response.questions.map(() => '')
+      currentStep.value = steps.length
+      return
+    }
+
+    generatedProgram.value = response.program
+    programSource.value = response.source
+    clarificationQuestions.value = []
+    currentStep.value = steps.length
+  } finally {
+    isGenerating.value = false
+  }
+}
+
 async function onSubmit(event: FormSubmitEvent<Schema>) {
-  generatedProgram.value = generateProgram(event.data)
-  currentStep.value = steps.length
+  await requestProgram(event.data)
+}
+
+async function submitClarifications() {
+  if (!pendingFormData.value) return
+  const clarifications: ClarificationQA[] = clarificationQuestions.value.map((question, i) => ({
+    question,
+    answer: clarificationAnswers.value[i] || ''
+  }))
+  await requestProgram(pendingFormData.value, clarifications)
 }
 
 function startOver() {
   generatedProgram.value = null
+  programSource.value = null
+  clarificationQuestions.value = []
+  clarificationAnswers.value = []
+  pendingFormData.value = null
   currentStep.value = 0
   state.name = ''
-  state.goal = 'muscle_building'
+  state.goals = ['muscle_building']
   state.experience = 'beginner'
   state.daysPerWeek = 3
   state.sessionDuration = 60
@@ -101,7 +145,7 @@ const durationOptions = [
       </div>
 
       <!-- Stepper -->
-      <div v-if="!generatedProgram" class="mt-8">
+      <div v-if="!generatedProgram && clarificationQuestions.length === 0" class="mt-8">
         <UStepper
           :items="steps.map((s, i) => ({ title: s.title, description: s.description, icon: s.icon }))"
           :model-value="currentStep"
@@ -126,12 +170,12 @@ const durationOptions = [
             <div v-show="currentStep === 1" class="space-y-6">
               <div class="text-center mb-6">
                 <UIcon name="i-lucide-target" class="size-12 text-primary mx-auto mb-2" />
-                <h2 class="text-xl font-semibold">What is your main goal?</h2>
-                <p class="text-muted">This determines the structure of your workouts.</p>
+                <h2 class="text-xl font-semibold">What are your goals?</h2>
+                <p class="text-muted">Select one or more - this determines the structure of your workouts.</p>
               </div>
-              <UFormField name="goal">
-                <URadioGroup
-                  v-model="state.goal"
+              <UFormField name="goals">
+                <UCheckboxGroup
+                  v-model="state.goals"
                   :items="fitnessGoals.map(g => ({ value: g.value, label: g.label, description: g.description }))"
                   class="space-y-3"
                 />
@@ -228,6 +272,7 @@ const durationOptions = [
                   type="submit"
                   label="Generate My Program"
                   icon="i-lucide-sparkles"
+                  :loading="isGenerating"
                 />
               </div>
             </template>
@@ -235,8 +280,45 @@ const durationOptions = [
         </UForm>
       </div>
 
+      <!-- Clarification Questions -->
+      <div v-else-if="clarificationQuestions.length > 0 && !generatedProgram" class="mt-8">
+        <UCard>
+          <div class="text-center mb-6">
+            <UIcon name="i-lucide-message-circle-question" class="size-12 text-primary mx-auto mb-2" />
+            <h2 class="text-xl font-semibold">Just a few more details</h2>
+            <p class="text-muted">Your answers help us fine-tune the program before generating it.</p>
+          </div>
+          <div class="space-y-5">
+            <UFormField
+              v-for="(question, i) in clarificationQuestions"
+              :key="i"
+              :label="question"
+            >
+              <UTextarea v-model="clarificationAnswers[i]" :rows="2" class="w-full" />
+            </UFormField>
+          </div>
+          <template #footer>
+            <div class="flex justify-between">
+              <UButton
+                label="Back"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-arrow-left"
+                @click="clarificationQuestions = []; currentStep = steps.length - 1"
+              />
+              <UButton
+                label="Continue"
+                icon="i-lucide-sparkles"
+                :loading="isGenerating"
+                @click="submitClarifications"
+              />
+            </div>
+          </template>
+        </UCard>
+      </div>
+
       <!-- Generated Program -->
-      <div v-else class="mt-8 space-y-6">
+      <div v-else-if="generatedProgram" class="mt-8 space-y-6">
         <UAlert
           title="Your program is ready!"
           :description="`${generatedProgram.name} has been created based on your preferences.`"
@@ -251,7 +333,10 @@ const durationOptions = [
                 <h2 class="text-xl font-bold">{{ generatedProgram.name }}</h2>
                 <p class="text-muted">Goal: {{ generatedProgram.goal }}</p>
               </div>
-              <UBadge color="primary" size="lg">{{ generatedProgram.schedule.length }} days/week</UBadge>
+              <div class="flex items-center gap-2">
+                <UBadge v-if="programSource === 'ai'" color="primary" variant="subtle" icon="i-lucide-sparkles">AI-generated</UBadge>
+                <UBadge color="primary" size="lg">{{ generatedProgram.schedule.length }} days/week</UBadge>
+              </div>
             </div>
           </template>
 

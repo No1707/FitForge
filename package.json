@@ -9,6 +9,7 @@
     "prepare": "nuxt prepare"
   },
   "dependencies": {
+    "@google/genai": "^2.11.0",
     "@iconify-json/lucide": "^1.2.45",
     "@iconify-json/simple-icons": "^1.2.45",
     "@nuxt/ui": "^3.0.0",

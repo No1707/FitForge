@@ -42,13 +42,18 @@ function toggleColorMode() {
           </nav>
 
           <div class="flex items-center gap-2">
-            <UButton
-              :icon="colorMode.value === 'dark' ? 'i-lucide-sun' : 'i-lucide-moon'"
-              color="neutral"
-              variant="ghost"
-              :aria-label="colorMode.value === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
-              @click="toggleColorMode"
-            />
+            <ClientOnly>
+              <UButton
+                :icon="colorMode.value === 'dark' ? 'i-lucide-sun' : 'i-lucide-moon'"
+                color="neutral"
+                variant="ghost"
+                :aria-label="colorMode.value === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+                @click="toggleColorMode"
+              />
+              <template #fallback>
+                <UButton icon="i-lucide-moon" color="neutral" variant="ghost" aria-label="Toggle color mode" />
+              </template>
+            </ClientOnly>
             <UButton to="/program" label="Get Started" color="primary" class="hidden sm:inline-flex" />
             <UButton
               class="md:hidden"

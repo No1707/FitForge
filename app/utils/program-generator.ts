@@ -16,7 +16,9 @@ const difficultyByExperience: Record<ProgramFormData['experience'], string[]> = 
   advanced: ['beginner', 'intermediate', 'advanced', 'none']
 }
 
-const setsRepsRestByGoal: Record<ProgramFormData['goal'], { sets: number, reps: string, rest: string }> = {
+type Goal = ProgramFormData['goals'][number]
+
+const setsRepsRestByGoal: Record<Goal, { sets: number, reps: string, rest: string }> = {
   muscle_building: { sets: 4, reps: '8-12', rest: '75s' },
   strength: { sets: 4, reps: '3-6', rest: '150s' },
   fat_loss: { sets: 3, reps: '12-20', rest: '30s' },
@@ -24,7 +26,7 @@ const setsRepsRestByGoal: Record<ProgramFormData['goal'], { sets: number, reps: 
   general_fitness: { sets: 3, reps: '10-15', rest: '60s' }
 }
 
-const goalLabels: Record<ProgramFormData['goal'], string> = {
+const goalLabels: Record<Goal, string> = {
   muscle_building: 'Muscle Building',
   strength: 'Strength',
   fat_loss: 'Fat Loss',
@@ -32,7 +34,7 @@ const goalLabels: Record<ProgramFormData['goal'], string> = {
   general_fitness: 'General Fitness'
 }
 
-const tipsByGoal: Record<ProgramFormData['goal'], string[]> = {
+const tipsByGoal: Record<Goal, string[]> = {
   muscle_building: [
     'Aim for progressive overload - increase weight or reps each week',
     'Eat in a slight caloric surplus (200-300 calories above maintenance)',
@@ -157,7 +159,10 @@ function exercisesPerDay(sessionDuration: number): number {
 export function generateProgram(formData: ProgramFormData): GeneratedProgram {
   const pattern = buildDayPattern(formData.daysPerWeek, formData.splitPreference)
   const targetCount = exercisesPerDay(formData.sessionDuration)
-  const setsRepsRest = setsRepsRestByGoal[formData.goal]
+  // The deterministic fallback can't blend rep schemes across goals like the
+  // AI can, so it uses the first selected goal to drive sets/reps/rest.
+  const primaryGoal = formData.goals[0] || 'general_fitness'
+  const setsRepsRest = setsRepsRestByGoal[primaryGoal]
 
   const schedule: WorkoutDay[] = pattern.map((day, index) => {
     const groups = day.groups
@@ -190,10 +195,13 @@ export function generateProgram(formData: ProgramFormData): GeneratedProgram {
     }
   })
 
+  const goalLabel = formData.goals.map(g => goalLabels[g]).join(' & ')
+  const tips = [...new Set(formData.goals.flatMap(g => tipsByGoal[g]))].slice(0, 6)
+
   return {
-    name: `${formData.name}'s ${goalLabels[formData.goal]} Program`,
-    goal: goalLabels[formData.goal],
+    name: `${formData.name}'s ${goalLabel} Program`,
+    goal: goalLabel,
     schedule,
-    tips: tipsByGoal[formData.goal]
+    tips
   }
 }

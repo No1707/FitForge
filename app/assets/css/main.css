@@ -1,6 +1,12 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
+/* Browsers don't set pointer cursor on <button> by default - Nuxt UI's
+   buttons, radios, and checkboxes are all native <button> elements. */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
 @theme static {
   --color-coral-50: #fff3ee;
   --color-coral-100: #ffe4d9;

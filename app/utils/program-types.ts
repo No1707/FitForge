@@ -1,6 +1,6 @@
 export interface ProgramFormData {
   name: string
-  goal: 'muscle_building' | 'fat_loss' | 'strength' | 'endurance' | 'general_fitness'
+  goals: ('muscle_building' | 'fat_loss' | 'strength' | 'endurance' | 'general_fitness')[]
   experience: 'beginner' | 'intermediate' | 'advanced'
   daysPerWeek: number
   sessionDuration: number
@@ -29,6 +29,20 @@ export interface GeneratedProgram {
   schedule: WorkoutDay[]
   tips: string[]
 }
+
+export interface ClarificationQA {
+  question: string
+  answer: string
+}
+
+export interface GenerateProgramRequestBody {
+  formData: ProgramFormData
+  clarifications?: ClarificationQA[]
+}
+
+export type GenerateProgramResponseBody =
+  | { status: 'needs_clarification', questions: string[] }
+  | { status: 'ready', program: GeneratedProgram, source: 'ai' | 'fallback' }
 
 export const fitnessGoals = [
   { value: 'muscle_building', label: 'Build Muscle', description: 'Focus on hypertrophy and muscle growth' },
