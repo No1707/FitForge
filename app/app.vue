@@ -2,12 +2,14 @@
 const links = [
   { label: 'Home', to: '/', icon: 'i-lucide-home' },
   { label: 'Exercises', to: '/exercises', icon: 'i-lucide-dumbbell' },
-  { label: 'Build Program', to: '/program', icon: 'i-lucide-clipboard-list' }
+  { label: 'Build Program', to: '/program', icon: 'i-lucide-clipboard-list' },
+  { label: 'My Programs', to: '/programs', icon: 'i-lucide-user-round' }
 ]
 
 const isMenuOpen = ref(false)
 const route = useRoute()
 const colorMode = useColorMode()
+const user = useSupabaseUser()
 
 watch(() => route.path, () => {
   isMenuOpen.value = false
@@ -54,7 +56,18 @@ function toggleColorMode() {
                 <UButton icon="i-lucide-moon" color="neutral" variant="ghost" aria-label="Toggle color mode" />
               </template>
             </ClientOnly>
-            <UButton to="/program" label="Get Started" color="primary" class="hidden sm:inline-flex" />
+            <ClientOnly>
+              <template v-if="user">
+                <AccountMenu />
+              </template>
+              <template v-else>
+                <UButton to="/login" label="Log in" color="neutral" variant="ghost" class="hidden sm:inline-flex" />
+                <UButton to="/program" label="Get Started" color="primary" class="hidden sm:inline-flex" />
+              </template>
+              <template #fallback>
+                <UButton to="/program" label="Get Started" color="primary" class="hidden sm:inline-flex" />
+              </template>
+            </ClientOnly>
             <UButton
               class="md:hidden"
               :icon="isMenuOpen ? 'i-lucide-x' : 'i-lucide-menu'"
@@ -104,17 +117,9 @@ function toggleColorMode() {
               icon="i-simple-icons-github"
               color="neutral"
               variant="ghost"
-              to="https://github.com"
+              to="https://github.com/No1707"
               target="_blank"
               aria-label="GitHub"
-            />
-            <UButton
-              icon="i-simple-icons-x"
-              color="neutral"
-              variant="ghost"
-              to="https://x.com"
-              target="_blank"
-              aria-label="X"
             />
           </div>
         </UContainer>

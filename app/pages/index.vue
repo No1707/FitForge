@@ -2,13 +2,8 @@
 const features = [
   {
     title: 'Exercise Library',
-    description: 'Browse 50+ exercises with detailed instructions, videos, and muscle targeting info.',
+    description: 'Browse 228+ exercises with detailed instructions, video links, and muscle targeting info.',
     icon: 'i-lucide-library'
-  },
-  {
-    title: 'Video Tutorials',
-    description: 'Learn proper form with embedded video demonstrations for every exercise.',
-    icon: 'i-lucide-play-circle'
   },
   {
     title: 'Custom Programs',
@@ -23,10 +18,10 @@ const features = [
 ]
 
 const stats = [
-  { label: 'Exercises', value: '50+' },
-  { label: 'Muscle Groups', value: '12' },
-  { label: 'Video Tutorials', value: '50+' },
-  { label: 'Users', value: '10K+' }
+  { label: 'Exercises', value: '228+' },
+  { label: 'Muscle Groups', value: '7' },
+  { label: 'Personalized Program Generation', value: 'AI' },
+  { label: 'On Every Exercise', value: 'Pro Tips' }
 ]
 
 const categories = [
@@ -94,7 +89,7 @@ const categories = [
           </p>
         </div>
 
-        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid gap-6 sm:grid-cols-3">
           <UCard v-for="feature in features" :key="feature.title">
             <div class="p-2 rounded-lg bg-primary/10 w-fit mb-4">
               <UIcon :name="feature.icon" class="size-6 text-primary" />

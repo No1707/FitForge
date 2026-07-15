@@ -254,7 +254,11 @@ function getCategoryIcon(category: string) {
     </UContainer>
 
     <!-- Exercise Detail Modal -->
-    <UModal v-model:open="isModalOpen" :title="selectedExercise?.name">
+    <UModal
+      v-model:open="isModalOpen"
+      :title="selectedExercise?.name"
+      description="Instructions, targeted muscles, and tips for this exercise."
+    >
       <template #body>
         <div v-if="selectedExercise" class="space-y-6">
           <!-- Info Badges -->
@@ -302,7 +306,7 @@ function getCategoryIcon(category: string) {
                 :key="index"
                 class="flex gap-3"
               >
-                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-inverted flex items-center justify-center text-sm font-medium">
                   {{ index + 1 }}
                 </span>
                 <span class="text-muted">{{ instruction }}</span>
