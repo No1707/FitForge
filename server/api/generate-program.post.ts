@@ -71,11 +71,15 @@ function buildPrompt(body: GenerateProgramRequestBody, catalog: ReturnType<typeo
     ? `\n\nThe user already answered these follow-up questions:\n${clarifications.map(c => `Q: ${c.question}\nA: ${c.answer}`).join('\n')}\n\nYou now have enough information - you MUST return status "ready" with a full program. Do not ask further questions.`
     : `\n\nIf anything about the request is ambiguous, conflicting, or under-specified (for example: stated experience level doesn't match available equipment, an injury area overlaps with a requested focus area, the goal and schedule seem mismatched), you may ask up to ${MAX_QUESTIONS} short, specific clarifying questions instead of generating a program yet. Only ask questions that would meaningfully change the program. If the request is already clear, skip straight to status "ready".`
 
+  const scheduleFraming = formData.scheduleType === 'fixed'
+    ? `\n\nThis is a fixed ${formData.daysPerWeek}-day program, not a weekly cadence - treat the days as a single training block/rotation, not literal days of a week.`
+    : ''
+
   return `You are a fitness coach building a personalized workout program.
 
 User's questionnaire answers:
 ${JSON.stringify(formData, null, 2)}
-${answeredClarifications}
+${answeredClarifications}${scheduleFraming}
 
 Exercise catalog you MUST choose exercises from (do not invent exercises outside this list - use the exact "name" field):
 ${JSON.stringify(catalog)}
@@ -86,6 +90,7 @@ When you return a program:
 - Match difficulty to their experience level.
 - Give each day a clear "day" label (e.g. "Day 1") and a "focus" label (e.g. "Push", "Full Body").
 - Keep sets/reps/rest realistic for their goal.
+- If the user provided additional notes, take them into account when choosing exercises and structuring the program.
 - Include 3-5 practical tips for this specific program.`
 }
 

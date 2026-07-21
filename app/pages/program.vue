@@ -2,7 +2,7 @@
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import {
-  fitnessGoals, experienceLevels, equipmentOptions, splitPreferences,
+  fitnessGoals, experienceLevels, equipmentOptions, splitPreferences, scheduleTypeOptions,
   type ProgramFormData, type GeneratedProgram, type ClarificationQA, type GenerateProgramResponseBody
 } from '~/utils/program-types'
 import { muscleFilterGroups } from '~/utils/exercises'
@@ -32,12 +32,14 @@ const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   goals: z.array(z.enum(['muscle_building', 'fat_loss', 'strength', 'endurance', 'general_fitness'])).min(1, 'Select at least one goal'),
   experience: z.enum(['beginner', 'intermediate', 'advanced']),
-  daysPerWeek: z.number().min(2).max(6),
+  scheduleType: z.enum(['weekly', 'fixed']),
+  daysPerWeek: z.number().min(2).max(14),
   sessionDuration: z.number().min(30).max(120),
   splitPreference: z.enum(['auto', 'full_body', 'upper_lower', 'push_pull_legs']),
   equipment: z.array(z.string()).min(1, 'Select at least one equipment type'),
   focusAreas: z.array(z.string()),
-  excludeAreas: z.array(z.string())
+  excludeAreas: z.array(z.string()),
+  additionalNotes: z.string().max(500).optional().default('')
 })
 
 type Schema = z.output<typeof schema>
@@ -46,12 +48,23 @@ const state = reactive<ProgramFormData>({
   name: '',
   goals: ['muscle_building'],
   experience: 'beginner',
+  scheduleType: 'weekly',
   daysPerWeek: 3,
   sessionDuration: 60,
   splitPreference: 'auto',
   equipment: ['bodyweight'],
   focusAreas: [],
-  excludeAreas: []
+  excludeAreas: [],
+  additionalNotes: ''
+})
+
+const weeklyDaysOptions = [2, 3, 4, 5, 6].map(n => ({ value: n, label: `${n} days` }))
+const fixedDaysOptions = [7, 8, 9, 10, 11, 12, 13, 14].map(n => ({ value: n, label: `${n} days` }))
+const dayCountOptions = computed(() => state.scheduleType === 'weekly' ? weeklyDaysOptions : fixedDaysOptions)
+const dayCountLabel = computed(() => state.scheduleType === 'weekly' ? 'Days per week' : 'Total days in the program')
+
+watch(() => state.scheduleType, (mode) => {
+  state.daysPerWeek = mode === 'weekly' ? 3 : 7
 })
 
 function nextStep() {
@@ -135,21 +148,15 @@ function startOver() {
   state.name = ''
   state.goals = ['muscle_building']
   state.experience = 'beginner'
+  state.scheduleType = 'weekly'
   state.daysPerWeek = 3
   state.sessionDuration = 60
   state.splitPreference = 'auto'
   state.equipment = ['bodyweight']
   state.focusAreas = []
   state.excludeAreas = []
+  state.additionalNotes = ''
 }
-
-const daysOptions = [
-  { value: 2, label: '2 days' },
-  { value: 3, label: '3 days' },
-  { value: 4, label: '4 days' },
-  { value: 5, label: '5 days' },
-  { value: 6, label: '6 days' }
-]
 
 const durationOptions = [
   { value: 30, label: '30 minutes' },
@@ -231,8 +238,15 @@ const durationOptions = [
                 <h2 class="text-xl font-semibold">How often can you train?</h2>
                 <p class="text-muted">We will design your split based on your availability.</p>
               </div>
-              <UFormField name="daysPerWeek" label="Days per week">
-                <USelect v-model="state.daysPerWeek" :items="daysOptions" size="lg" />
+              <UFormField name="scheduleType" label="How do you want to count days?">
+                <URadioGroup
+                  v-model="state.scheduleType"
+                  :items="scheduleTypeOptions.map(s => ({ value: s.value, label: s.label, description: s.description }))"
+                  class="space-y-3"
+                />
+              </UFormField>
+              <UFormField name="daysPerWeek" :label="dayCountLabel">
+                <USelect v-model="state.daysPerWeek" :items="dayCountOptions" size="lg" />
               </UFormField>
               <UFormField name="sessionDuration" label="Session duration">
                 <USelect v-model="state.sessionDuration" :items="durationOptions" size="lg" />
@@ -272,6 +286,14 @@ const durationOptions = [
                   v-model="state.excludeAreas"
                   :items="muscleFilterGroups.map(m => ({ value: m.label, label: m.label }))"
                   class="grid grid-cols-3 gap-3"
+                />
+              </UFormField>
+              <UFormField name="additionalNotes" label="Anything else we should know? (optional)">
+                <UTextarea
+                  v-model="state.additionalNotes"
+                  placeholder="Old shoulder injury, prefer supersets, no exercises on a bench, etc."
+                  :rows="3"
+                  class="w-full"
                 />
               </UFormField>
             </div>

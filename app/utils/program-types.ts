@@ -2,12 +2,14 @@ export interface ProgramFormData {
   name: string
   goals: ('muscle_building' | 'fat_loss' | 'strength' | 'endurance' | 'general_fitness')[]
   experience: 'beginner' | 'intermediate' | 'advanced'
+  scheduleType: 'weekly' | 'fixed'
   daysPerWeek: number
   sessionDuration: number
   splitPreference: 'auto' | 'full_body' | 'upper_lower' | 'push_pull_legs'
   equipment: string[]
   focusAreas: string[]
   excludeAreas: string[]
+  additionalNotes: string
 }
 
 export interface ProgramExercise {
@@ -56,6 +58,11 @@ export const experienceLevels = [
   { value: 'beginner', label: 'Beginner', description: 'New to lifting (0-1 years)' },
   { value: 'intermediate', label: 'Intermediate', description: 'Consistent training (1-3 years)' },
   { value: 'advanced', label: 'Advanced', description: 'Experienced lifter (3+ years)' }
+] as const
+
+export const scheduleTypeOptions = [
+  { value: 'weekly', label: 'Per Week', description: 'Repeats this split every week - the most common way to plan training' },
+  { value: 'fixed', label: 'Fixed Length', description: 'A set number of training days, not tied to a weekly cycle (e.g. an 8 or 9-day rotation)' }
 ] as const
 
 export const splitPreferences = [
