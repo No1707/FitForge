@@ -1,4 +1,4 @@
-import { fromDbRow, type SavedProgram, type SavedProgramInput } from '~/utils/program-editor-types'
+import { fromDbRow, type EditableDay, type SavedProgram, type SavedProgramInput } from '~/utils/program-editor-types'
 
 export function usePrograms() {
   const supabase = useSupabaseClient()
@@ -52,5 +52,10 @@ export function usePrograms() {
     if (error) throw error
   }
 
-  return { list, get, create, remove, setActive }
+  async function updateSchedule(id: string, schedule: EditableDay[]): Promise<void> {
+    const { error } = await supabase.from('programs').update({ schedule }).eq('id', id)
+    if (error) throw error
+  }
+
+  return { list, get, create, remove, setActive, updateSchedule }
 }

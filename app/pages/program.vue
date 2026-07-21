@@ -361,7 +361,7 @@ const durationOptions = [
               </div>
               <div class="flex items-center gap-2">
                 <UBadge v-if="programSource === 'ai'" color="primary" variant="subtle" icon="i-lucide-sparkles">AI-generated</UBadge>
-                <UBadge color="primary" size="lg">{{ generatedProgram.schedule.length }} days/week</UBadge>
+                <UBadge color="primary" size="lg">{{ generatedProgram.schedule.length }}-Day Program</UBadge>
               </div>
             </div>
           </template>

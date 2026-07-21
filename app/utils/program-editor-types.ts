@@ -1,4 +1,31 @@
-import type { WorkoutDay } from './program-types'
+import type { ProgramExercise, WorkoutDay } from './program-types'
+
+export interface EditableProgramExercise extends ProgramExercise {
+  id: string
+}
+
+export interface EditableDay {
+  day: string
+  focus: string
+  notes: string
+  exercises: EditableProgramExercise[]
+}
+
+// Normalizes either a fresh AI/blank-start schedule (no id/notes) or a
+// previously-saved editable schedule (round-tripped from the jsonb column,
+// already has id/notes) into the same editable shape - preserving existing
+// ids/notes rather than regenerating them avoids id churn across edit sessions.
+export function toEditableSchedule(schedule: (WorkoutDay | EditableDay)[]): EditableDay[] {
+  return schedule.map(day => ({
+    day: day.day,
+    focus: day.focus,
+    notes: (day as Partial<EditableDay>).notes ?? '',
+    exercises: day.exercises.map(ex => ({
+      ...ex,
+      id: (ex as Partial<EditableProgramExercise>).id ?? crypto.randomUUID()
+    }))
+  }))
+}
 
 export interface SavedProgram {
   id: string

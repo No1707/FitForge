@@ -3947,6 +3947,21 @@ export const muscleFilterGroups = [
   { label: 'Full Body', values: ['Full Body'] }
 ] as const
 
+// Equipment bucket for filter rows (exercises browser, exercise picker) - detailed
+// equipment/muscle values are still shown as-is on exercise cards and in the modal.
+export const equipmentFilterGroups = [
+  { label: 'Barbell', values: ['barbell'] },
+  { label: 'Dumbbell', values: ['dumbbell'] },
+  { label: 'Machine', values: ['machine'] },
+  { label: 'Bodyweight', values: ['bodyweight'] },
+  { label: 'Kettlebell', values: ['kettlebell'] },
+  { label: 'Cable', values: ['cable'] },
+  { label: 'Bands', values: ['bands'] },
+  { label: 'Exercise Ball', values: ['exercise-ball'] },
+  { label: 'Other', values: ['ez-bar', 'landmine', 'trap-bar', 'plate', 'other'] },
+  { label: 'None', values: ['none'] }
+]
+
 export type Category = typeof categories[number]
 export type Equipment = typeof equipmentTypes[number]
 export type Difficulty = typeof difficultyLevels[number]

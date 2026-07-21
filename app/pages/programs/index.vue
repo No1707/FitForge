@@ -33,9 +33,15 @@ async function deleteProgram(id: string) {
 <template>
   <div class="py-8">
     <UContainer class="max-w-3xl">
-      <div class="border-b border-default pb-6">
-        <h1 class="text-3xl font-bold">My Programs</h1>
-        <p class="mt-2 text-muted">Programs you've saved to your account.</p>
+      <div class="border-b border-default pb-6 flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 class="text-3xl font-bold">My Programs</h1>
+          <p class="mt-2 text-muted">Programs you've saved to your account.</p>
+        </div>
+        <div v-if="!isLoading && programs.length > 0" class="flex gap-2">
+          <UButton to="/program" label="Build with AI" icon="i-lucide-sparkles" color="neutral" variant="outline" />
+          <UButton to="/programs/new" label="Start from Scratch" icon="i-lucide-pencil" color="neutral" variant="outline" />
+        </div>
       </div>
 
       <div v-if="isLoading" class="py-24 text-center">
@@ -57,7 +63,10 @@ async function deleteProgram(id: string) {
         </div>
         <h3 class="font-semibold text-lg">No saved programs yet</h3>
         <p class="text-muted mt-1 mb-4">Build a personalized program and save it to your account.</p>
-        <UButton to="/program" label="Build with AI" icon="i-lucide-sparkles" />
+        <div class="flex gap-2">
+          <UButton to="/program" label="Build with AI" icon="i-lucide-sparkles" />
+          <UButton to="/programs/new" label="Start from Scratch" icon="i-lucide-pencil" color="neutral" variant="outline" />
+        </div>
       </div>
 
       <div v-else class="mt-8 grid gap-4 sm:grid-cols-2">
@@ -71,7 +80,7 @@ async function deleteProgram(id: string) {
             <div class="flex items-center gap-1.5">
               <UBadge v-if="prog.isActive" color="success" variant="subtle" size="sm">Active</UBadge>
               <UBadge v-if="prog.source === 'ai'" color="primary" variant="subtle" size="sm" icon="i-lucide-sparkles">AI</UBadge>
-              <UBadge color="neutral" variant="subtle" size="sm">{{ prog.schedule.length }} days/week</UBadge>
+              <UBadge color="neutral" variant="subtle" size="sm">{{ prog.schedule.length }}-Day Program</UBadge>
             </div>
           </template>
 
