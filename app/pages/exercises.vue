@@ -43,6 +43,11 @@ function openExercise(exercise: Exercise) {
   isModalOpen.value = true
 }
 
+function openQuickAdd(exercise: Exercise) {
+  selectedExercise.value = exercise
+  isQuickAddOpen.value = true
+}
+
 function clearFilters() {
   searchQuery.value = ''
   selectedCategories.value = []
@@ -188,9 +193,19 @@ function getCategoryIcon(category: string) {
         <UCard
           v-for="exercise in filteredExercises"
           :key="exercise.id"
-          class="cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+          class="relative group cursor-pointer hover:ring-2 hover:ring-primary transition-all"
           @click="openExercise(exercise)"
         >
+          <UButton
+            v-if="user"
+            icon="i-lucide-plus"
+            size="sm"
+            color="primary"
+            class="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Add to program"
+            @click.stop="openQuickAdd(exercise)"
+          />
+
           <template #header>
             <div class="flex flex-wrap gap-1.5">
               <UBadge :color="getDifficultyColor(exercise.difficulty)" variant="subtle" size="md">
