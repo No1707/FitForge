@@ -28,10 +28,7 @@ export default defineNuxtConfig({
         { name: 'description', content: 'Discover exercises, learn proper form, and build your custom workout program' }
       ],
       link: [
-        { rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' },
-        { rel: 'icon', type: 'image/png', media: '(prefers-color-scheme: light)', href: '/icon-light-32x32.png' },
-        { rel: 'icon', type: 'image/png', media: '(prefers-color-scheme: dark)', href: '/icon-dark-32x32.png' },
-        { rel: 'apple-touch-icon', href: '/apple-icon.png' }
+        { rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' }
       ]
     }
   }

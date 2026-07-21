@@ -31,7 +31,7 @@ function toggleColorMode() {
       <header class="sticky top-0 z-50 border-b border-default bg-default/80 backdrop-blur">
         <UContainer class="flex items-center justify-between h-16">
           <NuxtLink to="/" class="flex items-center gap-2">
-            <UIcon name="i-lucide-flame" class="size-6 text-primary" />
+            <UIcon name="i-lucide-anvil" class="size-6 text-primary" />
             <span class="font-bold text-xl">FitForge</span>
           </NuxtLink>
 
