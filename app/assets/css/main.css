@@ -2,8 +2,13 @@
 @import '@nuxt/ui';
 
 /* Reserve space for the scrollbar even on pages short enough not to need one,
-   so content doesn't shift horizontally when navigating between pages. */
-html {
+   so content doesn't shift horizontally when navigating between pages.
+   Also applied to body: when a modal/dropdown scroll-lock sets body's
+   overflow to hidden, the browser propagates body's overflow behavior to
+   the viewport (since html's overflow is left as the default "visible"),
+   which would otherwise drop the reserved gutter along with it. */
+html,
+body {
   scrollbar-gutter: stable;
 }
 

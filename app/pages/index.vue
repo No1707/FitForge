@@ -18,10 +18,10 @@ const features = [
 ]
 
 const stats = [
-  { label: 'Exercises', value: '228+' },
-  { label: 'Muscle Groups', value: '7' },
-  { label: 'Personalized Program Generation', value: 'AI' },
-  { label: 'On Every Exercise', value: 'Pro Tips' }
+  { label: 'Exercises', value: '200+' },
+  { label: 'Build, Save & Edit Your Programs', value: 'Yours' },
+  { label: 'Personalized Workout Generation', value: 'AI' },
+  { label: 'Tailored To Your Program', value: 'Tips' }
 ]
 
 const categories = [

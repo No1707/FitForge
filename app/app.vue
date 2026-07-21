@@ -25,7 +25,7 @@ function toggleColorMode() {
 </script>
 
 <template>
-  <UApp>
+  <UApp :scroll-body="false">
     <div class="min-h-screen flex flex-col bg-default">
       <!-- Header -->
       <header class="sticky top-0 z-50 border-b border-default bg-default/80 backdrop-blur">
