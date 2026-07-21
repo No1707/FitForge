@@ -1,6 +1,12 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
+/* Reserve space for the scrollbar even on pages short enough not to need one,
+   so content doesn't shift horizontally when navigating between pages. */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* Browsers don't set pointer cursor on <button> by default - Nuxt UI's
    buttons, radios, and checkboxes are all native <button> elements. */
 button:not(:disabled) {
