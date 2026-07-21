@@ -19,11 +19,14 @@ export function useProgramEditor(schedule: Ref<EditableDay[]>) {
     renumberDays(schedule.value)
   }
 
-  function addExercise(dayIndex: number, exercise: ProgramExercise) {
+  // Returns false (and adds nothing) if this exercise is already in that day.
+  function addExercise(dayIndex: number, exercise: ProgramExercise): boolean {
     const day = schedule.value[dayIndex]
-    if (!day) return
+    if (!day) return false
+    if (day.exercises.some(ex => ex.name === exercise.name)) return false
     const editableExercise: EditableProgramExercise = { ...exercise, id: crypto.randomUUID() }
     day.exercises.push(editableExercise)
+    return true
   }
 
   function removeExercise(dayIndex: number, exerciseId: string) {

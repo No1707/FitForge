@@ -24,9 +24,21 @@ async function loadPrograms() {
 
 await loadPrograms()
 
-async function deleteProgram(id: string) {
-  await remove(id)
-  programs.value = programs.value.filter(p => p.id !== id)
+const pendingDeleteId = ref<string | null>(null)
+const isDeleteConfirmOpen = computed({
+  get: () => pendingDeleteId.value !== null,
+  set: (value: boolean) => { if (!value) pendingDeleteId.value = null }
+})
+
+function confirmDelete(id: string) {
+  pendingDeleteId.value = id
+}
+
+async function performDelete() {
+  if (!pendingDeleteId.value) return
+  await remove(pendingDeleteId.value)
+  programs.value = programs.value.filter(p => p.id !== pendingDeleteId.value)
+  pendingDeleteId.value = null
 }
 </script>
 
@@ -93,11 +105,19 @@ async function deleteProgram(id: string) {
               size="sm"
               color="error"
               variant="ghost"
-              @click.stop="deleteProgram(prog.id)"
+              @click.stop="confirmDelete(prog.id)"
             />
           </template>
         </UCard>
       </div>
     </UContainer>
+
+    <ConfirmDialog
+      v-model:open="isDeleteConfirmOpen"
+      title="Delete this program?"
+      description="This can't be undone."
+      confirm-label="Delete"
+      @confirm="performDelete"
+    />
   </div>
 </template>

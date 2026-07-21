@@ -81,8 +81,11 @@ const splitCycles: Record<'full_body' | 'upper_lower' | 'push_pull_legs', SplitD
     { name: 'Lower Body', groups: ['Legs', 'Core'] }
   ],
   push_pull_legs: [
-    { name: 'Push', groups: ['Chest', 'Shoulders', 'Arms'] },
-    { name: 'Pull', groups: ['Back', 'Arms', 'Core'] },
+    // "Arms" (the shared filter bucket) lumps biceps and triceps together,
+    // which would let pulling (bicep) exercises leak into a Push day and vice
+    // versa - use the precise muscle names here instead for Push/Pull.
+    { name: 'Push', groups: ['Chest', 'Shoulders', 'Triceps'] },
+    { name: 'Pull', groups: ['Back', 'Biceps', 'Forearms', 'Core'] },
     { name: 'Legs', groups: ['Legs', 'Core'] }
   ]
 }
@@ -127,8 +130,12 @@ function buildDayPattern(daysPerWeek: number, splitPreference: ProgramFormData['
 }
 
 function poolForGroup(group: string, formData: ProgramFormData): Exercise[] {
+  // `group` is usually a broad muscleFilterGroups label ("Chest", "Legs"...),
+  // but splitCycles can also pass a precise raw muscle name (e.g. "Triceps")
+  // when a broad bucket would be too ambiguous (see push_pull_legs) - fall
+  // back to matching that single value directly in that case.
   const groupDef = muscleFilterGroups.find(g => g.label === group)
-  if (!groupDef) return []
+  const matchValues: readonly string[] = groupDef ? groupDef.values : [group]
 
   const allowedDifficulty = difficultyByExperience[formData.experience]
   const excludedMuscles = new Set(
@@ -138,7 +145,7 @@ function poolForGroup(group: string, formData: ProgramFormData): Exercise[] {
   return exercises.filter((exercise) => {
     // Stretches don't fit a sets/reps training program - leave them out.
     if (exercise.category === 'flexibility') return false
-    const matchesGroup = groupDef.values.some(v => exercise.muscles.includes(v))
+    const matchesGroup = matchValues.some(v => exercise.muscles.includes(v))
     if (!matchesGroup) return false
     if (exercise.muscles.some(m => excludedMuscles.has(m))) return false
     const hasEquipment = exercise.equipment === 'bodyweight' || formData.equipment.includes(exercise.equipment)

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import type { Exercise } from '~/utils/exercises'
+import { exercises, type Exercise } from '~/utils/exercises'
 import { toEditableSchedule, type EditableDay, type SavedProgram } from '~/utils/program-editor-types'
 
 definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
 const { get, remove, setActive, updateSchedule } = usePrograms()
+const toast = useToast()
 
 const program = ref<SavedProgram | null>(null)
 const schedule = ref<EditableDay[]>([])
@@ -109,14 +110,28 @@ function openPicker(dayIndex: number) {
   pickerOpenForDay.value = dayIndex
 }
 
+const detailExercise = ref<Exercise | null>(null)
+const isDetailOpen = ref(false)
+
+function openDetail(exerciseName: string) {
+  const found = exercises.find(e => e.name === exerciseName)
+  if (!found) return
+  detailExercise.value = found
+  isDetailOpen.value = true
+}
+
 function handleExerciseSelected(exercise: Exercise) {
   if (pickerOpenForDay.value === null) return
-  editor.addExercise(pickerOpenForDay.value, {
+  const added = editor.addExercise(pickerOpenForDay.value, {
     name: exercise.name,
     sets: 3,
     reps: '8-12',
     rest: '60s'
   })
+  if (!added) {
+    toast.add({ title: 'Already in this day', description: `${exercise.name} is already part of this day.`, color: 'warning' })
+    return
+  }
   persistSchedule()
 }
 
@@ -130,6 +145,8 @@ async function activateProgram() {
     isActivating.value = false
   }
 }
+
+const isDeleteConfirmOpen = ref(false)
 
 async function deleteProgram() {
   if (!program.value) return
@@ -176,7 +193,7 @@ async function deleteProgram() {
             </span>
             <UBadge v-if="program.isActive" color="success" variant="subtle" icon="i-lucide-check">Active</UBadge>
             <UButton v-else label="Set as Active" size="sm" color="neutral" variant="outline" :loading="isActivating" @click="activateProgram" />
-            <UButton icon="i-lucide-trash-2" size="sm" color="error" variant="outline" :loading="isDeleting" @click="deleteProgram" />
+            <UButton icon="i-lucide-trash-2" size="sm" color="error" variant="outline" :loading="isDeleting" @click="isDeleteConfirmOpen = true" />
           </div>
         </div>
 
@@ -185,7 +202,7 @@ async function deleteProgram() {
             <h2 class="text-xl font-bold">{{ program.name }}</h2>
             <p class="text-muted">Goal: {{ program.goal }}</p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex flex-col items-end gap-2">
             <UBadge v-if="program.source === 'ai'" color="primary" variant="subtle" icon="i-lucide-sparkles">AI-generated</UBadge>
             <UBadge color="primary" size="lg">{{ schedule.length }}-Day Program</UBadge>
           </div>
@@ -223,7 +240,7 @@ async function deleteProgram() {
             <div class="space-y-3">
               <UTextarea
                 :model-value="day.notes"
-                placeholder="Notes for this day (optional)"
+                placeholder="Notes for this day"
                 :rows="2"
                 class="w-full"
                 @update:model-value="handleNotesInput(dayIndex, String($event))"
@@ -236,8 +253,18 @@ async function deleteProgram() {
                   class="p-2 rounded-lg bg-muted space-y-1.5"
                 >
                   <div class="flex items-center justify-between gap-2">
-                    <p class="font-medium text-sm truncate min-w-0">{{ exercise.name }}</p>
+                    <UTooltip :text="exercise.name">
+                      <p class="font-medium text-sm truncate min-w-0">{{ exercise.name }}</p>
+                    </UTooltip>
                     <div class="flex items-center shrink-0">
+                      <UButton
+                        icon="i-lucide-info"
+                        size="xs"
+                        color="neutral"
+                        variant="ghost"
+                        aria-label="View exercise details"
+                        @click="openDetail(exercise.name)"
+                      />
                       <UButton
                         icon="i-lucide-chevron-up"
                         size="xs"
@@ -333,6 +360,20 @@ async function deleteProgram() {
       :open="pickerOpenForDay !== null"
       @update:open="(value) => { if (!value) pickerOpenForDay = null }"
       @select="handleExerciseSelected"
+    />
+
+    <ExerciseDetailModal v-model:open="isDetailOpen" :exercise="detailExercise">
+      <template #footer>
+        <UButton label="Close" color="neutral" variant="outline" @click="isDetailOpen = false" />
+      </template>
+    </ExerciseDetailModal>
+
+    <ConfirmDialog
+      v-model:open="isDeleteConfirmOpen"
+      title="Delete this program?"
+      description="This can't be undone."
+      confirm-label="Delete"
+      @confirm="deleteProgram"
     />
   </div>
 </template>

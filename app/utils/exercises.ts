@@ -3965,3 +3965,33 @@ export const equipmentFilterGroups = [
 export type Category = typeof categories[number]
 export type Equipment = typeof equipmentTypes[number]
 export type Difficulty = typeof difficultyLevels[number]
+
+// Shared display helpers used anywhere an Exercise's category/equipment/difficulty is shown.
+export function formatLabel(value: string): string {
+  if (value === 'ez-bar') return 'EZ Bar'
+  return value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
+export function formatDifficulty(value: string): string {
+  if (value === 'none') return 'Unrated'
+  return formatLabel(value)
+}
+
+export function getDifficultyColor(difficulty: string): 'success' | 'warning' | 'error' | 'neutral' {
+  switch (difficulty) {
+    case 'beginner': return 'success'
+    case 'intermediate': return 'warning'
+    case 'advanced': return 'error'
+    default: return 'neutral'
+  }
+}
+
+export function getCategoryIcon(category: string): string {
+  switch (category) {
+    case 'strength': return 'i-lucide-dumbbell'
+    case 'cardio': return 'i-lucide-heart-pulse'
+    case 'bodyweight': return 'i-lucide-person-standing'
+    case 'flexibility': return 'i-lucide-stretch-horizontal'
+    default: return 'i-lucide-activity'
+  }
+}

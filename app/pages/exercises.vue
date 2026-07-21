@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { exercises, categories, difficultyLevels, muscleFilterGroups, equipmentFilterGroups, type Exercise } from '~/utils/exercises'
+import {
+  exercises, categories, difficultyLevels, muscleFilterGroups, equipmentFilterGroups,
+  formatLabel, formatDifficulty, getDifficultyColor, getCategoryIcon, type Exercise
+} from '~/utils/exercises'
 
 const route = useRoute()
 const user = useSupabaseUser()
@@ -67,35 +70,6 @@ const difficultyButtons = difficultyLevels.filter(d => d !== 'all')
 
 const muscleButtons = muscleFilterGroups.map(g => g.label)
 const equipmentButtons = equipmentFilterGroups.map(g => g.label)
-
-function formatLabel(value: string) {
-  if (value === 'ez-bar') return 'EZ Bar'
-  return value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-}
-
-function formatDifficulty(value: string) {
-  if (value === 'none') return 'Unrated'
-  return formatLabel(value)
-}
-
-function getDifficultyColor(difficulty: string) {
-  switch (difficulty) {
-    case 'beginner': return 'success'
-    case 'intermediate': return 'warning'
-    case 'advanced': return 'error'
-    default: return 'neutral'
-  }
-}
-
-function getCategoryIcon(category: string) {
-  switch (category) {
-    case 'strength': return 'i-lucide-dumbbell'
-    case 'cardio': return 'i-lucide-heart-pulse'
-    case 'bodyweight': return 'i-lucide-person-standing'
-    case 'flexibility': return 'i-lucide-stretch-horizontal'
-    default: return 'i-lucide-activity'
-  }
-}
 </script>
 
 <template>
@@ -257,99 +231,13 @@ function getCategoryIcon(category: string) {
     </UContainer>
 
     <!-- Exercise Detail Modal -->
-    <UModal
-      v-model:open="isModalOpen"
-      :title="selectedExercise?.name"
-      description="Instructions, targeted muscles, and tips for this exercise."
-    >
-      <template #body>
-        <div v-if="selectedExercise" class="space-y-6">
-          <!-- Info Badges -->
-          <div class="flex flex-wrap gap-2">
-            <UBadge :color="getDifficultyColor(selectedExercise.difficulty)" size="lg">
-              {{ formatDifficulty(selectedExercise.difficulty) }}
-            </UBadge>
-            <UBadge color="primary" variant="subtle" size="lg">
-              <UIcon :name="getCategoryIcon(selectedExercise.category)" class="size-4 mr-1" />
-              {{ formatLabel(selectedExercise.category) }}
-            </UBadge>
-            <UBadge color="neutral" variant="subtle" size="lg">
-              {{ formatLabel(selectedExercise.equipment) }}
-            </UBadge>
-          </div>
-
-          <!-- Description -->
-          <div>
-            <h3 class="font-semibold text-lg mb-2">About This Exercise</h3>
-            <p class="text-muted">{{ selectedExercise.description }}</p>
-          </div>
-
-          <!-- Muscles -->
-          <div>
-            <h3 class="font-semibold text-lg mb-2">Muscles Worked</h3>
-            <div class="flex flex-wrap gap-2">
-              <UBadge
-                v-for="muscle in selectedExercise.muscles"
-                :key="muscle"
-                color="primary"
-                variant="subtle"
-                size="lg"
-              >
-                {{ muscle }}
-              </UBadge>
-            </div>
-          </div>
-
-          <!-- Instructions -->
-          <div>
-            <h3 class="font-semibold text-lg mb-2">Instructions</h3>
-            <ol class="space-y-3">
-              <li
-                v-for="(instruction, index) in selectedExercise.instructions"
-                :key="index"
-                class="flex gap-3"
-              >
-                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-inverted flex items-center justify-center text-sm font-medium">
-                  {{ index + 1 }}
-                </span>
-                <span class="text-muted">{{ instruction }}</span>
-              </li>
-            </ol>
-            <UButton
-              :to="selectedExercise.videoUrl"
-              target="_blank"
-              label="Watch video tutorial"
-              icon="i-lucide-youtube"
-              trailing-icon="i-lucide-external-link"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              class="mt-4"
-            />
-          </div>
-
-          <!-- Tips -->
-          <UAlert
-            title="Pro Tips"
-            icon="i-lucide-lightbulb"
-            color="warning"
-            variant="subtle"
-          >
-            <template #description>
-              <ul class="list-disc list-inside space-y-1 mt-2">
-                <li v-for="tip in selectedExercise.tips" :key="tip">{{ tip }}</li>
-              </ul>
-            </template>
-          </UAlert>
-        </div>
-      </template>
-
+    <ExerciseDetailModal v-model:open="isModalOpen" :exercise="selectedExercise">
       <template #footer>
         <UButton label="Close" color="neutral" variant="outline" @click="isModalOpen = false" />
         <UButton v-if="user" label="Add to Program" icon="i-lucide-plus" @click="isQuickAddOpen = true" />
         <UButton v-else label="Log in to add" icon="i-lucide-log-in" to="/login" />
       </template>
-    </UModal>
+    </ExerciseDetailModal>
 
     <QuickAddDialog v-model:open="isQuickAddOpen" :exercise="selectedExercise" />
   </div>

@@ -5,10 +5,20 @@ import {
   fitnessGoals, experienceLevels, equipmentOptions, splitPreferences, scheduleTypeOptions,
   type ProgramFormData, type GeneratedProgram, type ClarificationQA, type GenerateProgramResponseBody
 } from '~/utils/program-types'
-import { muscleFilterGroups } from '~/utils/exercises'
+import { exercises, muscleFilterGroups, type Exercise } from '~/utils/exercises'
 
 const user = useSupabaseUser()
 const { create: createProgram } = usePrograms()
+
+const detailExercise = ref<Exercise | null>(null)
+const isDetailOpen = ref(false)
+
+function openDetail(exerciseName: string) {
+  const found = exercises.find(e => e.name === exerciseName)
+  if (!found) return
+  detailExercise.value = found
+  isDetailOpen.value = true
+}
 
 const currentStep = ref(0)
 const generatedProgram = ref<GeneratedProgram | null>(null)
@@ -67,8 +77,17 @@ watch(() => state.scheduleType, (mode) => {
   state.daysPerWeek = mode === 'weekly' ? 3 : 7
 })
 
+const isStepValid = computed(() => {
+  switch (currentStep.value) {
+    case 0: return state.name.trim().length >= 2
+    case 1: return state.goals.length > 0
+    case 4: return state.equipment.length > 0
+    default: return true
+  }
+})
+
 function nextStep() {
-  if (currentStep.value < steps.length - 1) {
+  if (currentStep.value < steps.length - 1 && isStepValid.value) {
     currentStep.value++
   }
 }
@@ -76,6 +95,13 @@ function nextStep() {
 function prevStep() {
   if (currentStep.value > 0) {
     currentStep.value--
+  }
+}
+
+function goToStep(step: number) {
+  // Only allow jumping back to an already-completed step, never skipping ahead.
+  if (step < currentStep.value) {
+    currentStep.value = step
   }
 }
 
@@ -183,6 +209,7 @@ const durationOptions = [
           :items="steps.map((s, i) => ({ title: s.title, description: s.description, icon: s.icon }))"
           :model-value="currentStep"
           class="mb-8"
+          @update:model-value="goToStep"
         />
 
         <UForm :schema="schema" :state="state" class="space-y-6" @submit="onSubmit">
@@ -306,6 +333,7 @@ const durationOptions = [
                   color="neutral"
                   variant="ghost"
                   icon="i-lucide-arrow-left"
+                  :disabled="isGenerating"
                   @click="prevStep"
                 />
                 <div v-else />
@@ -313,6 +341,7 @@ const durationOptions = [
                   v-if="currentStep < steps.length - 1"
                   label="Continue"
                   trailing-icon="i-lucide-arrow-right"
+                  :disabled="!isStepValid"
                   @click="nextStep"
                 />
                 <UButton
@@ -321,6 +350,7 @@ const durationOptions = [
                   label="Generate My Program"
                   icon="i-lucide-sparkles"
                   :loading="isGenerating"
+                  :disabled="!isStepValid"
                 />
               </div>
             </template>
@@ -381,7 +411,7 @@ const durationOptions = [
                 <h2 class="text-xl font-bold">{{ generatedProgram.name }}</h2>
                 <p class="text-muted">Goal: {{ generatedProgram.goal }}</p>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-col items-end gap-2">
                 <UBadge v-if="programSource === 'ai'" color="primary" variant="subtle" icon="i-lucide-sparkles">AI-generated</UBadge>
                 <UBadge color="primary" size="lg">{{ generatedProgram.schedule.length }}-Day Program</UBadge>
               </div>
@@ -400,8 +430,18 @@ const durationOptions = [
                   :key="idx"
                   class="flex items-center justify-between p-3 border-b border-default last:border-0"
                 >
-                  <span class="font-medium">{{ exercise.name }}</span>
-                  <div class="flex gap-4 text-sm text-muted">
+                  <div class="flex items-center gap-1 min-w-0">
+                    <UButton
+                      icon="i-lucide-info"
+                      size="xs"
+                      color="neutral"
+                      variant="ghost"
+                      aria-label="View exercise details"
+                      @click="openDetail(exercise.name)"
+                    />
+                    <span class="font-medium truncate">{{ exercise.name }}</span>
+                  </div>
+                  <div class="flex gap-4 text-sm text-muted shrink-0">
                     <span>{{ exercise.sets }} sets</span>
                     <span>{{ exercise.reps }} reps</span>
                     <span>{{ exercise.rest }} rest</span>
@@ -464,5 +504,11 @@ const durationOptions = [
         </div>
       </div>
     </UContainer>
+
+    <ExerciseDetailModal v-model:open="isDetailOpen" :exercise="detailExercise">
+      <template #footer>
+        <UButton label="Close" color="neutral" variant="outline" @click="isDetailOpen = false" />
+      </template>
+    </ExerciseDetailModal>
   </div>
 </template>

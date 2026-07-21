@@ -53,9 +53,13 @@ async function chooseProgram(program: SavedProgram) {
 
 async function addToDay(dayIndex: number) {
   if (!props.exercise || !selectedProgram.value) return
+  const added = editor.addExercise(dayIndex, { name: props.exercise.name, sets: 3, reps: '8-12', rest: '60s' })
+  if (!added) {
+    toast.add({ title: 'Already in this day', description: `${props.exercise.name} is already part of this day.`, color: 'warning' })
+    return
+  }
   isSaving.value = true
   try {
-    editor.addExercise(dayIndex, { name: props.exercise.name, sets: 3, reps: '8-12', rest: '60s' })
     await updateSchedule(selectedProgram.value.id, selectedSchedule.value)
     toast.add({ title: `Added to ${selectedProgram.value.name}`, color: 'success', icon: 'i-lucide-check' })
     open.value = false

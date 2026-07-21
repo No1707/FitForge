@@ -69,7 +69,7 @@ function buildPrompt(body: GenerateProgramRequestBody, catalog: ReturnType<typeo
 
   const answeredClarifications = clarifications && clarifications.length > 0
     ? `\n\nThe user already answered these follow-up questions:\n${clarifications.map(c => `Q: ${c.question}\nA: ${c.answer}`).join('\n')}\n\nYou now have enough information - you MUST return status "ready" with a full program. Do not ask further questions.`
-    : `\n\nIf anything about the request is ambiguous, conflicting, or under-specified (for example: stated experience level doesn't match available equipment, an injury area overlaps with a requested focus area, the goal and schedule seem mismatched), you may ask up to ${MAX_QUESTIONS} short, specific clarifying questions instead of generating a program yet. Only ask questions that would meaningfully change the program. If the request is already clear, skip straight to status "ready".`
+    : `\n\nBefore generating, consider whether a short clarifying question could help you build a better, more personalized program - for example: stated experience level doesn't match available equipment, an injury area overlaps with a requested focus area, the goal and schedule seem mismatched, the split preference doesn't suit their days per week, or their additional notes raise something worth digging into. If you have any reasonable question that would help you tailor the program, ask it (up to ${MAX_QUESTIONS} short, specific questions) rather than guessing. Only skip straight to status "ready" if the request is already fully clear and you have no useful follow-up.`
 
   const scheduleFraming = formData.scheduleType === 'fixed'
     ? `\n\nThis is a fixed ${formData.daysPerWeek}-day program, not a weekly cadence - treat the days as a single training block/rotation, not literal days of a week.`
@@ -86,9 +86,11 @@ ${JSON.stringify(catalog)}
 
 When you return a program:
 - Only use exercise names that appear exactly in the catalog above.
-- Respect the user's equipment, excluded areas, and focus areas.
-- Match difficulty to their experience level.
+- The user's equipment list is what's available to them, not a requirement - bodyweight exercises are always appropriate regardless of what's selected, and not every exercise needs to use one of the listed equipment types. Just never pick an exercise that needs equipment NOT in their list.
+- Respect the user's excluded areas and focus areas.
+- Match difficulty to their experience level, but you can fit a few exercises that would be a bit hard for them, the goal is for them to improve.
 - Give each day a clear "day" label (e.g. "Day 1") and a "focus" label (e.g. "Push", "Full Body").
+- Every exercise chosen for a day MUST match that day's focus label and its underlying muscle groups - e.g. a "Push" day should only contain pushing movements (chest, shoulders, triceps), never pulling/back or biceps exercises; a "Pull" day should only contain back/biceps/forearms pulling movements, never pushing exercises; a "Legs" day only lower-body exercises. Do not mix muscle groups that contradict the day's stated split.
 - Keep sets/reps/rest realistic for their goal.
 - If the user provided additional notes, take them into account when choosing exercises and structuring the program.
 - Include 3-5 practical tips for this specific program.`
