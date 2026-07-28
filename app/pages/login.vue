@@ -43,7 +43,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   <div class="py-16">
     <UContainer class="max-w-sm">
       <div class="text-center mb-8">
-        <UIcon name="i-lucide-flame" class="size-10 text-primary mx-auto mb-2" />
+        <UIcon name="i-lucide-anvil" class="size-10 text-primary mx-auto mb-2" />
         <h1 class="text-2xl font-bold">Welcome back</h1>
         <p class="text-muted mt-1">Log in to access your saved programs.</p>
       </div>

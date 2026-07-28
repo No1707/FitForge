@@ -110,7 +110,7 @@ function toggleColorMode() {
       <footer class="border-t border-default mt-16">
         <UContainer class="py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-flame" class="size-5 text-primary" />
+            <UIcon name="i-lucide-anvil" class="size-5 text-primary" />
             <span class="font-semibold">FitForge</span>
           </div>
           <p class="text-muted text-sm">
