@@ -1,62 +1,16 @@
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
-
 const { create } = usePrograms()
-
-const name = ref('My Program')
+const name = ref('Mon programme')
 const goal = ref('')
-const isCreating = ref(false)
-const createError = ref<string | null>(null)
-
-async function createProgram() {
-  isCreating.value = true
-  createError.value = null
-  try {
-    const saved = await create({
-      name: name.value || 'My Program',
-      goal: goal.value,
-      source: 'manual',
-      schedule: [{ day: 'Day 1', focus: '', exercises: [] }],
-      tips: []
-    })
-    await navigateTo(`/programs/${saved.id}`)
-  } catch {
-    createError.value = 'Could not create your program. Please try again in a moment.'
-  } finally {
-    isCreating.value = false
-  }
+const saving = ref(false)
+const error = ref('')
+async function save() {
+  if (!name.value.trim() || saving.value) return
+  saving.value = true; error.value = ''
+  try { const program = await create({ name: name.value.trim(), goal: goal.value.trim(), source: 'manual', schedule: [{ day: 'Séance 1', focus: 'Ma séance', exercises: [] }], tips: [] }); await navigateTo(`/programs/${program.id}?edit=1`) }
+  catch { error.value = 'Le programme n’a pas pu être enregistré. Réessaie dans un instant.' }
+  finally { saving.value = false }
 }
+useHead({ title: 'Créer mon programme · FitForge' })
 </script>
-
-<template>
-  <div class="py-16">
-    <UContainer class="max-w-sm">
-      <div class="text-center mb-8">
-        <UIcon name="i-lucide-pencil" class="size-10 text-primary mx-auto mb-2" />
-        <h1 class="text-2xl font-bold">Start from Scratch</h1>
-        <p class="text-muted mt-1">Give your program a name to get started - you can add days and exercises next.</p>
-      </div>
-
-      <UCard>
-        <div class="space-y-4">
-          <UFormField label="Program Name" required>
-            <UInput v-model="name" placeholder="e.g. My Push Pull Legs" class="w-full" />
-          </UFormField>
-          <UFormField label="Goal (optional)">
-            <UInput v-model="goal" placeholder="e.g. Build muscle" class="w-full" />
-          </UFormField>
-
-          <UAlert
-            v-if="createError"
-            color="error"
-            variant="subtle"
-            icon="i-lucide-alert-circle"
-            :description="createError"
-          />
-
-          <UButton label="Create Program" icon="i-lucide-plus" block :loading="isCreating" @click="createProgram" />
-        </div>
-      </UCard>
-    </UContainer>
-  </div>
-</template>
+<template><div class="ff-page max-w-2xl"><NuxtLink to="/programs" class="text-sm text-muted inline-flex gap-2 items-center mb-7"><UIcon name="i-lucide-arrow-left" class="size-4" />Mes programmes</NuxtLink><h1 class="ff-title">Programme manuel</h1><form method="post" class="ff-panel ff-panel-pad mt-7 space-y-5" @submit.prevent="save"><label class="block text-sm font-semibold">Nom du programme<input v-model="name" class="ff-field mt-2" required maxlength="80" /></label><label class="block text-sm font-semibold">Objectif <span class="font-normal text-muted">· facultatif</span><input v-model="goal" class="ff-field mt-2" maxlength="150" placeholder="Ex. : musculation avec haltères" /></label><UAlert v-if="error" :description="error" color="error" /><UButton type="submit" label="Ajouter mes séances" trailing-icon="i-lucide-arrow-right" block :loading="saving" :disabled="!name.trim()" /></form></div></template>

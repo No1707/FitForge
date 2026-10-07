@@ -1,379 +1,77 @@
 <script setup lang="ts">
-import { exercises, type Exercise } from '~/utils/exercises'
-import { toEditableSchedule, type EditableDay, type SavedProgram } from '~/utils/program-editor-types'
-
-definePageMeta({ middleware: 'auth' })
-
+import { toEditableSchedule, type SavedProgram, type EditableDay } from '~/utils/program-editor-types'
+import { findExercise, focusLabel } from '~/utils/exercise-helpers'
+import type { Exercise } from '~/utils/exercises'
+import { estimateMinutes, nextDayIndex } from '~/utils/workout'
 const route = useRoute()
-const { get, remove, setActive, updateSchedule } = usePrograms()
-const toast = useToast()
-
+const { data } = useTrainingStore()
+const { get, updateSchedule, setActive } = usePrograms()
 const program = ref<SavedProgram | null>(null)
 const schedule = ref<EditableDay[]>([])
-const isLoading = ref(true)
-const isDeleting = ref(false)
-const isActivating = ref(false)
-const isSaving = ref(false)
-const notFound = ref(false)
-const loadError = ref<string | null>(null)
-const saveError = ref<string | null>(null)
-
-async function loadProgram() {
-  isLoading.value = true
-  loadError.value = null
-  try {
-    const result = await get(route.params.id as string)
-    if (!result) {
-      notFound.value = true
-      return
-    }
-    program.value = result
-    schedule.value = toEditableSchedule(result.schedule)
-  } catch {
-    loadError.value = 'Could not load this program. Please try again in a moment.'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-await loadProgram()
-
 const editor = useProgramEditor(schedule)
-
-async function persistSchedule() {
-  if (!program.value) return
-  isSaving.value = true
-  saveError.value = null
+const loading = ref(true)
+const saving = ref(false)
+const activating = ref(false)
+const error = ref('')
+const editing = ref(false)
+const selected = ref(0)
+const snapshot = ref('')
+const dirty = computed(() => editing.value && JSON.stringify(schedule.value) !== snapshot.value)
+const selectedDay = computed(() => schedule.value[selected.value])
+const pickerOpen = ref(false)
+const detail = ref<Exercise | null>(null)
+const detailOpen = ref(false)
+const deleted = ref<string | null>(null)
+const leaveOpen = ref(false)
+let resolveLeave: ((value: boolean) => void) | null = null
+const previousState = ref<EditableDay[] | null>(null)
+onMounted(async () => {
   try {
-    await updateSchedule(program.value.id, schedule.value)
-  } catch {
-    saveError.value = 'Could not save your changes. Please try again in a moment.'
-  } finally {
-    isSaving.value = false
-  }
+    program.value = await get(String(route.params.id))
+    if (program.value) {
+      schedule.value = toEditableSchedule(program.value.schedule)
+      snapshot.value = JSON.stringify(schedule.value)
+      selected.value = nextDayIndex(program.value, data.value.workouts)
+      editing.value = route.query.edit === '1' || !schedule.value.some(day => day.exercises.length)
+    }
+  } catch { error.value = 'Ce programme ne peut pas être chargé pour le moment.' }
+  finally { loading.value = false }
+  window.addEventListener('beforeunload', beforeUnload)
+})
+onBeforeUnmount(() => { window.removeEventListener('beforeunload', beforeUnload); resolveLeave?.(false) })
+function beforeUnload(event: BeforeUnloadEvent) { if (dirty.value) { event.preventDefault(); event.returnValue = '' } }
+onBeforeRouteLeave(() => { if (!dirty.value) return true; leaveOpen.value = true; return new Promise<boolean>(resolve => { resolveLeave = resolve }) })
+watch(leaveOpen, value => { if (!value && resolveLeave) { resolveLeave(false); resolveLeave = null } })
+function leave() { const resolve = resolveLeave; resolveLeave = null; resolve?.(true) }
+function reset() { schedule.value = JSON.parse(snapshot.value); editing.value = false; deleted.value = null; selected.value = Math.min(selected.value, Math.max(0, schedule.value.length - 1)); error.value = '' }
+async function save() {
+  if (!program.value || saving.value) return
+  saving.value = true; error.value = ''
+  try { await updateSchedule(program.value.id, schedule.value); program.value = { ...program.value, schedule: JSON.parse(JSON.stringify(schedule.value)) }; snapshot.value = JSON.stringify(schedule.value); editing.value = false; deleted.value = null }
+  catch (failure) { error.value = failure instanceof Error ? failure.message : 'L’enregistrement a échoué. Tes modifications sont encore présentes ; réessaie.' }
+  finally { saving.value = false }
 }
-
-let saveTimeout: ReturnType<typeof setTimeout> | undefined
-function scheduleSave() {
-  clearTimeout(saveTimeout)
-  saveTimeout = setTimeout(persistSchedule, 700)
-}
-
-function handleAddDay() {
-  editor.addDay()
-  persistSchedule()
-}
-
-function handleRemoveDay(dayIndex: number) {
-  editor.removeDay(dayIndex)
-  persistSchedule()
-}
-
-function handleFocusInput(dayIndex: number, value: string) {
-  editor.updateDayFocus(dayIndex, value)
-  scheduleSave()
-}
-
-function handleNotesInput(dayIndex: number, value: string) {
-  editor.updateDayNotes(dayIndex, value)
-  scheduleSave()
-}
-
-function handleRemoveExercise(dayIndex: number, exerciseId: string) {
-  editor.removeExercise(dayIndex, exerciseId)
-  persistSchedule()
-}
-
-function handleMoveExercise(dayIndex: number, exerciseId: string, direction: 'up' | 'down') {
-  editor.moveExercise(dayIndex, exerciseId, direction)
-  persistSchedule()
-}
-
-function handleSetsInput(dayIndex: number, exerciseId: string, value: string) {
-  editor.updateExercise(dayIndex, exerciseId, { sets: Number(value) || 0 })
-  scheduleSave()
-}
-
-function handleRepsInput(dayIndex: number, exerciseId: string, value: string) {
-  editor.updateExercise(dayIndex, exerciseId, { reps: value })
-  scheduleSave()
-}
-
-function handleRestInput(dayIndex: number, exerciseId: string, value: string) {
-  editor.updateExercise(dayIndex, exerciseId, { rest: value })
-  scheduleSave()
-}
-
-const pickerOpenForDay = ref<number | null>(null)
-
-function openPicker(dayIndex: number) {
-  pickerOpenForDay.value = dayIndex
-}
-
-const detailExercise = ref<Exercise | null>(null)
-const isDetailOpen = ref(false)
-
-function openDetail(exerciseName: string) {
-  const found = exercises.find(e => e.name === exerciseName)
-  if (!found) return
-  detailExercise.value = found
-  isDetailOpen.value = true
-}
-
-function handleExerciseSelected(exercise: Exercise) {
-  if (pickerOpenForDay.value === null) return
-  const added = editor.addExercise(pickerOpenForDay.value, {
-    name: exercise.name,
-    sets: 3,
-    reps: '8-12',
-    rest: '60s'
-  })
-  if (!added) {
-    toast.add({ title: 'Already in this day', description: `${exercise.name} is already part of this day.`, color: 'warning' })
-    return
-  }
-  persistSchedule()
-}
-
-async function activateProgram() {
-  if (!program.value) return
-  isActivating.value = true
-  try {
-    await setActive(program.value.id)
-    program.value.isActive = true
-  } finally {
-    isActivating.value = false
-  }
-}
-
-const isDeleteConfirmOpen = ref(false)
-
-async function deleteProgram() {
-  if (!program.value) return
-  isDeleting.value = true
-  try {
-    await remove(program.value.id)
-    await navigateTo('/programs')
-  } finally {
-    isDeleting.value = false
-  }
-}
+async function activate() { if (!program.value) return; activating.value = true; error.value = ''; try { await setActive(program.value.id); program.value.isActive = true } catch { error.value = 'Ajoute des exercices puis réessaie d’activer ce programme.' } finally { activating.value = false } }
+function remember() { previousState.value = JSON.parse(JSON.stringify(schedule.value)) }
+function removeDay() { remember(); editor.removeDay(selected.value); selected.value = Math.max(0, selected.value - 1); deleted.value = 'Séance retirée du programme.' }
+function removeExercise(id: string) { remember(); editor.removeExercise(selected.value, id); deleted.value = 'Exercice retiré de la séance.' }
+function undo() { if (previousState.value) { schedule.value = previousState.value; previousState.value = null; selected.value = Math.min(selected.value, schedule.value.length - 1) }; deleted.value = null }
+function addDay() { editor.addDay(); selected.value = schedule.value.length - 1 }
+function addExercise(exercise: Exercise) { const added = editor.addExercise(selected.value, { exerciseId: exercise.id, name: exercise.name, sets: 3, reps: /plank|hold/i.test(exercise.name) ? '30 s' : '8-12', rest: '90s' }); if (added) { pickerOpen.value = false; error.value = '' } else error.value = 'Cet exercice est déjà présent dans cette séance.' }
+function openDetail(name: string) { detail.value = findExercise(name) || null; detailOpen.value = !!detail.value }
+useHead({ title: computed(() => `${program.value?.name || 'Programme'} · FitForge`) })
 </script>
-
 <template>
-  <div class="py-8">
-    <UContainer class="max-w-6xl">
-      <div v-if="isLoading" class="py-24 text-center">
-        <UIcon name="i-lucide-loader-circle" class="size-10 text-primary mx-auto animate-spin" />
-      </div>
-
-      <div v-else-if="notFound" class="mt-12 flex flex-col items-center text-center py-16">
-        <UIcon name="i-lucide-search-x" class="size-8 text-muted mb-4" />
-        <h3 class="font-semibold text-lg">Program not found</h3>
-        <p class="text-muted mt-1 mb-4">It may have been deleted, or it doesn't belong to your account.</p>
-        <UButton to="/programs" label="Back to My Programs" />
-      </div>
-
-      <UAlert
-        v-else-if="loadError"
-        class="mt-8"
-        color="error"
-        variant="subtle"
-        icon="i-lucide-alert-circle"
-        :description="loadError"
-      />
-
-      <div v-else-if="program" class="space-y-6">
-        <div class="flex items-center justify-between border-b border-default pb-6 flex-wrap gap-3">
-          <UButton to="/programs" label="My Programs" icon="i-lucide-arrow-left" color="neutral" variant="ghost" />
-          <div class="flex items-center gap-2">
-            <span v-if="isSaving" class="flex items-center gap-1 text-muted text-sm">
-              <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />
-              Saving…
-            </span>
-            <UBadge v-if="program.isActive" color="success" variant="subtle" icon="i-lucide-check">Active</UBadge>
-            <UButton v-else label="Set as Active" size="sm" color="neutral" variant="outline" :loading="isActivating" @click="activateProgram" />
-            <UButton icon="i-lucide-trash-2" size="sm" color="error" variant="outline" :loading="isDeleting" @click="isDeleteConfirmOpen = true" />
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h2 class="text-xl font-bold">{{ program.name }}</h2>
-            <p class="text-muted">Goal: {{ program.goal }}</p>
-          </div>
-          <div class="flex flex-col items-end gap-2">
-            <UBadge v-if="program.source === 'ai'" color="primary" variant="subtle" icon="i-lucide-sparkles">AI-generated</UBadge>
-            <UBadge color="primary" size="lg">{{ schedule.length }}-Day Program</UBadge>
-          </div>
-        </div>
-
-        <UAlert
-          v-if="saveError"
-          color="error"
-          variant="subtle"
-          icon="i-lucide-alert-circle"
-          :description="saveError"
-        />
-
-        <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          <UCard v-for="(day, dayIndex) in schedule" :key="dayIndex">
-            <template #header>
-              <div class="flex items-center justify-between gap-2">
-                <span class="font-semibold text-sm text-muted shrink-0">{{ day.day }}</span>
-                <UButton
-                  icon="i-lucide-trash-2"
-                  size="xs"
-                  color="error"
-                  variant="ghost"
-                  @click="handleRemoveDay(dayIndex)"
-                />
-              </div>
-              <UInput
-                :model-value="day.focus"
-                placeholder="e.g. Push Day"
-                class="w-full mt-2"
-                @update:model-value="handleFocusInput(dayIndex, String($event))"
-              />
-            </template>
-
-            <div class="space-y-3">
-              <UTextarea
-                :model-value="day.notes"
-                placeholder="Notes for this day"
-                :rows="2"
-                class="w-full"
-                @update:model-value="handleNotesInput(dayIndex, String($event))"
-              />
-
-              <div class="space-y-1">
-                <div
-                  v-for="(exercise, exIndex) in day.exercises"
-                  :key="exercise.id"
-                  class="p-2 rounded-lg bg-muted space-y-1.5"
-                >
-                  <div class="flex items-center justify-between gap-2">
-                    <UTooltip :text="exercise.name">
-                      <p class="font-medium text-sm truncate min-w-0">{{ exercise.name }}</p>
-                    </UTooltip>
-                    <div class="flex items-center shrink-0">
-                      <UButton
-                        icon="i-lucide-info"
-                        size="xs"
-                        color="neutral"
-                        variant="ghost"
-                        aria-label="View exercise details"
-                        @click="openDetail(exercise.name)"
-                      />
-                      <UButton
-                        icon="i-lucide-chevron-up"
-                        size="xs"
-                        color="neutral"
-                        variant="ghost"
-                        :disabled="exIndex === 0"
-                        @click="handleMoveExercise(dayIndex, exercise.id, 'up')"
-                      />
-                      <UButton
-                        icon="i-lucide-chevron-down"
-                        size="xs"
-                        color="neutral"
-                        variant="ghost"
-                        :disabled="exIndex === day.exercises.length - 1"
-                        @click="handleMoveExercise(dayIndex, exercise.id, 'down')"
-                      />
-                      <UButton
-                        icon="i-lucide-x"
-                        size="xs"
-                        color="error"
-                        variant="ghost"
-                        @click="handleRemoveExercise(dayIndex, exercise.id)"
-                      />
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-1 text-xs text-muted">
-                    <UInput
-                      :model-value="exercise.sets"
-                      type="number"
-                      size="xs"
-                      class="w-12"
-                      @update:model-value="handleSetsInput(dayIndex, exercise.id, String($event))"
-                    />
-                    <span>sets</span>
-                    <UInput
-                      :model-value="exercise.reps"
-                      size="xs"
-                      class="w-16"
-                      @update:model-value="handleRepsInput(dayIndex, exercise.id, String($event))"
-                    />
-                    <span>reps</span>
-                    <UInput
-                      :model-value="exercise.rest"
-                      size="xs"
-                      class="w-16"
-                      @update:model-value="handleRestInput(dayIndex, exercise.id, String($event))"
-                    />
-                    <span>rest</span>
-                  </div>
-                </div>
-              </div>
-
-              <UButton
-                label="Add Exercise"
-                icon="i-lucide-plus"
-                size="sm"
-                color="neutral"
-                variant="outline"
-                block
-                @click="openPicker(dayIndex)"
-              />
-            </div>
-          </UCard>
-
-          <UButton
-            label="Add Day"
-            icon="i-lucide-plus"
-            color="neutral"
-            variant="outline"
-            block
-            class="h-full min-h-24"
-            @click="handleAddDay"
-          />
-        </div>
-
-        <UAlert
-          v-if="program.tips.length > 0"
-          title="Tips for Success"
-          icon="i-lucide-lightbulb"
-          color="warning"
-          variant="subtle"
-        >
-          <template #description>
-            <ul class="list-disc list-inside space-y-1 mt-2">
-              <li v-for="tip in program.tips" :key="tip">{{ tip }}</li>
-            </ul>
-          </template>
-        </UAlert>
-      </div>
-    </UContainer>
-
-    <ExercisePicker
-      :open="pickerOpenForDay !== null"
-      @update:open="(value) => { if (!value) pickerOpenForDay = null }"
-      @select="handleExerciseSelected"
-    />
-
-    <ExerciseDetailModal v-model:open="isDetailOpen" :exercise="detailExercise">
-      <template #footer>
-        <UButton label="Close" color="neutral" variant="outline" @click="isDetailOpen = false" />
-      </template>
-    </ExerciseDetailModal>
-
-    <ConfirmDialog
-      v-model:open="isDeleteConfirmOpen"
-      title="Delete this program?"
-      description="This can't be undone."
-      confirm-label="Delete"
-      @confirm="deleteProgram"
-    />
+  <div class="ff-page max-w-5xl ff-fade"><NuxtLink to="/programs" class="text-sm text-muted inline-flex items-center gap-2 mb-6"><UIcon name="i-lucide-arrow-left" class="size-4" />Mes programmes</NuxtLink><div v-if="loading" class="py-20 text-center" role="status"><UIcon name="i-lucide-loader-circle" class="size-8 text-primary animate-spin" /></div><div v-else-if="!program" class="ff-panel ff-empty"><h1 class="text-xl font-semibold">Programme indisponible</h1><p class="text-sm text-muted mt-3">{{ error || 'Il a été supprimé ou appartient à un autre compte.' }}</p><UButton to="/programs" label="Mes programmes" class="mt-5" /></div>
+    <template v-else><div class="flex flex-wrap justify-between items-start gap-5"><div><p class="ff-eyebrow mb-3">{{ program.isActive ? 'MON PROGRAMME ACTIF' : 'MON PROGRAMME' }}</p><h1 class="ff-title">{{ program.name }}</h1><p class="text-muted mt-3">{{ program.goal }} · {{ schedule.length }} séances</p></div><div v-if="!editing" class="flex flex-wrap gap-2"><UButton v-if="!program.isActive" label="Utiliser ce programme" color="neutral" variant="outline" :loading="activating" @click="activate" /><UButton label="Modifier" icon="i-lucide-pencil" color="neutral" variant="outline" @click="() => { editing = true }" /></div></div>
+      <div v-if="editing" class="ff-panel p-4 mt-6 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-20 shadow-sm"><p class="text-sm font-medium">{{ dirty ? 'Modifications non enregistrées' : 'Édition du programme' }}</p><div class="flex gap-2"><UButton label="Annuler" color="neutral" variant="ghost" :disabled="saving" @click="reset" /><UButton label="Enregistrer" icon="i-lucide-check" :loading="saving" @click="save" /></div></div>
+      <UAlert v-if="error" :description="error" color="error" class="mt-5" /><div v-if="deleted" class="ff-panel p-3 mt-5 flex justify-between gap-3 items-center text-sm"><p>{{ deleted }}</p><UButton label="Annuler le retrait" color="neutral" variant="outline" @click="undo" /></div>
+      <div class="flex gap-2 overflow-x-auto mt-7 pb-3"><button v-for="(day, index) in schedule" :key="day.id || index" class="ff-option shrink-0 text-sm" :aria-pressed="selected === index" @click="() => { selected = index }">Séance {{ index + 1 }}</button><UButton v-if="editing" label="Ajouter une séance" icon="i-lucide-plus" color="neutral" variant="outline" class="shrink-0" :disabled="schedule.length >= 14" @click="addDay" /></div>
+      <div v-if="selectedDay" class="ff-panel overflow-hidden"><div class="p-5 sm:p-6 border-b border-default"><div class="flex items-start justify-between gap-3"><div class="min-w-0 flex-1"><label v-if="editing" class="text-sm font-medium block">Titre de la séance<input v-model="selectedDay.focus" class="ff-field mt-2" maxlength="100" placeholder="Ex. : haut du corps" /></label><h2 v-else class="text-2xl font-semibold tracking-tight">{{ focusLabel(selectedDay.focus) }}</h2><p class="text-sm text-muted mt-3">{{ selectedDay.exercises.length }} exercices<span v-if="selectedDay.exercises.length"> · ≈ {{ estimateMinutes(selectedDay) }} min</span></p></div><UButton v-if="editing" icon="i-lucide-trash-2" color="error" variant="ghost" aria-label="Retirer cette séance" @click="removeDay" /></div><label v-if="editing" class="block text-sm font-medium mt-5">Notes <span class="text-muted font-normal">· facultatif</span><textarea v-model="selectedDay.notes" rows="2" maxlength="1000" class="ff-field mt-2" placeholder="Ex. : réglage du banc" /></label><p v-else-if="selectedDay.notes" class="text-sm text-muted mt-3">{{ selectedDay.notes }}</p></div>
+        <div v-for="(exercise, index) in selectedDay.exercises" :key="exercise.id" class="p-5 sm:p-6 border-b border-default last:border-b-0"><div class="flex gap-3 items-start"><span class="text-xs text-muted mt-1">{{ String(index + 1).padStart(2, '0') }}</span><button class="font-semibold text-sm flex-1 min-w-0 text-left hover:text-primary" @click="openDetail(exercise.name)">{{ exercise.name }}</button><div v-if="editing" class="flex shrink-0"><UButton icon="i-lucide-chevron-up" color="neutral" variant="ghost" :disabled="index === 0" :aria-label="`Monter ${exercise.name}`" @click="editor.moveExercise(selected, exercise.id, 'up')" /><UButton icon="i-lucide-chevron-down" color="neutral" variant="ghost" :disabled="index === selectedDay.exercises.length - 1" :aria-label="`Descendre ${exercise.name}`" @click="editor.moveExercise(selected, exercise.id, 'down')" /><UButton icon="i-lucide-x" color="error" variant="ghost" :aria-label="`Retirer ${exercise.name}`" @click="removeExercise(exercise.id)" /></div><UIcon v-else name="i-lucide-chevron-right" class="size-4 text-muted" /></div><div v-if="editing" class="grid grid-cols-3 gap-3 mt-4"><label class="text-xs text-muted">Séries<input v-model.number="exercise.sets" type="number" min="1" max="10" class="ff-field mt-1" :aria-label="`Séries pour ${exercise.name}`" /></label><label class="text-xs text-muted">Répétitions<input v-model="exercise.reps" maxlength="20" class="ff-field mt-1" placeholder="8-12 ou 30 s" :aria-label="`Répétitions pour ${exercise.name}`" /></label><label class="text-xs text-muted">Repos<input v-model="exercise.rest" maxlength="20" class="ff-field mt-1" placeholder="90s" :aria-label="`Repos pour ${exercise.name}`" /></label></div><p v-else class="text-xs text-muted mt-2 ml-7">{{ exercise.sets }} séries · {{ exercise.reps }} · {{ exercise.rest }} repos</p></div><div v-if="editing" class="p-5"><UButton label="Ajouter un exercice" icon="i-lucide-plus" color="neutral" variant="outline" block @click="() => { pickerOpen = true }" /></div><p v-else-if="!selectedDay.exercises.length" class="text-sm text-muted p-6">Ajoute des exercices pour pouvoir commencer cette séance.</p></div>
+      <div v-else class="ff-panel ff-empty"><p class="text-muted">Ajoute une première séance à ton programme.</p><UButton v-if="editing" label="Ajouter une séance" icon="i-lucide-plus" class="mt-4" @click="addDay" /></div>
+      <UButton v-if="!editing && selectedDay?.exercises.length" :to="`/workout?program=${program.id}&day=${selected}`" label="Préparer cette séance" trailing-icon="i-lucide-arrow-right" block size="xl" class="mt-6" /><p v-if="editing" class="text-xs text-muted mt-4">Les modifications s’appliquent aux prochaines séances. L’historique reste inchangé.</p><StorageStatus class="mt-6" />
+    </template>
+    <ExercisePicker v-model:open="pickerOpen" @select="addExercise" /><ExerciseDetailModal v-model:open="detailOpen" :exercise="detail"><template #footer><UButton label="Fermer" color="neutral" variant="outline" @click="() => { detailOpen = false }" /></template></ExerciseDetailModal><ConfirmDialog v-model:open="leaveOpen" title="Quitter sans enregistrer ?" description="Les modifications de ce programme seront perdues." confirm-label="Quitter sans enregistrer" @confirm="leave" />
   </div>
 </template>

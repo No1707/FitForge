@@ -1,10 +1,11 @@
-import type { ProgramExercise, WorkoutDay } from './program-types'
+import type { ProgramExercise, WorkoutDay, ProgramSettings } from './program-types'
 
 export interface EditableProgramExercise extends ProgramExercise {
   id: string
 }
 
 export interface EditableDay {
+  id?: string
   day: string
   focus: string
   notes: string
@@ -17,6 +18,8 @@ export interface EditableDay {
 // ids/notes rather than regenerating them avoids id churn across edit sessions.
 export function toEditableSchedule(schedule: (WorkoutDay | EditableDay)[]): EditableDay[] {
   return schedule.map(day => ({
+    ...day,
+    id: day.id ?? crypto.randomUUID(),
     day: day.day,
     focus: day.focus,
     notes: (day as Partial<EditableDay>).notes ?? '',
@@ -31,32 +34,36 @@ export interface SavedProgram {
   id: string
   name: string
   goal: string
-  source: 'ai' | 'manual'
+  source: 'ai' | 'manual' | 'fallback'
   isActive: boolean
   schedule: WorkoutDay[]
   tips: string[]
   createdAt: string
   updatedAt: string
+  settings?: ProgramSettings
+  localOnly?: boolean
 }
 
 export interface SavedProgramInput {
   name: string
   goal: string
-  source: 'ai' | 'manual'
+  source: 'ai' | 'manual' | 'fallback'
   schedule: WorkoutDay[]
   tips: string[]
+  settings?: ProgramSettings
 }
 
 interface ProgramDbRow {
   id: string
   name: string
   goal: string
-  source: 'ai' | 'manual'
+  source: 'ai' | 'manual' | 'fallback'
   is_active: boolean
   schedule: WorkoutDay[]
   tips: string[]
   created_at: string
   updated_at: string
+  settings?: ProgramSettings | null
 }
 
 export function fromDbRow(row: ProgramDbRow): SavedProgram {
@@ -69,6 +76,7 @@ export function fromDbRow(row: ProgramDbRow): SavedProgram {
     schedule: row.schedule,
     tips: row.tips,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    settings: row.settings || undefined
   }
 }

@@ -6,7 +6,9 @@
     "dev": "nuxt dev",
     "build": "nuxt build",
     "preview": "nuxt preview",
-    "prepare": "nuxt prepare"
+    "prepare": "nuxt prepare",
+    "test": "node --require ./tests/register.cjs --test tests/*.test.cjs",
+    "typecheck": "nuxt typecheck"
   },
   "dependencies": {
     "@google/genai": "^2.11.0",
@@ -17,9 +19,11 @@
     "nuxt": "^3.16.0",
     "tailwindcss": "^4.0.0",
     "vue": "^3.5.0",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "@supabase/ssr": "^0.10.3"
   },
   "devDependencies": {
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vue-tsc": "^3.3.12"
   }
 }

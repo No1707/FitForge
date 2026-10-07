@@ -1,46 +1,19 @@
 <script setup lang="ts">
+import { safeRedirect } from '~/utils/program-validation'
 const user = useSupabaseUser()
-const hasTimedOut = ref(false)
-
+const route = useRoute()
+const timedOut = ref(false)
+const redirect = ref('/')
+let timer: ReturnType<typeof setTimeout> | undefined
+let stop: (() => void) | undefined
 onMounted(() => {
-  // The Supabase client auto-detects the confirmation token in the URL and
-  // establishes the session - we just wait for `user` to become truthy.
-  if (user.value) {
-    navigateTo('/programs')
-    return
-  }
-
-  const timeout = setTimeout(() => {
-    if (!user.value) hasTimedOut.value = true
-  }, 5000)
-
-  const stop = watch(user, (value) => {
-    if (value) {
-      clearTimeout(timeout)
-      stop()
-      navigateTo('/programs')
-    }
-  })
+  let saved = '/'
+  try { saved = sessionStorage.getItem('fitforge:auth-return') || '/' } catch { /* Use the return URL from the link. */ }
+  redirect.value = safeRedirect(route.query.redirect, safeRedirect(saved))
+  function complete() { clearTimeout(timer); stop?.(); navigateTo(redirect.value) }
+  if (user.value) complete()
+  else { timer = setTimeout(() => { timedOut.value = true }, 8000); stop = watch(user, value => { if (value) complete() }) }
 })
+onBeforeUnmount(() => { clearTimeout(timer); stop?.() })
 </script>
-
-<template>
-  <div class="py-24">
-    <UContainer class="max-w-sm text-center">
-      <template v-if="!hasTimedOut">
-        <UIcon name="i-lucide-loader-circle" class="size-10 text-primary mx-auto mb-4 animate-spin" />
-        <h1 class="text-xl font-semibold">Confirming your account…</h1>
-        <p class="text-muted mt-1">This will only take a moment.</p>
-      </template>
-      <UAlert
-        v-else
-        color="error"
-        variant="subtle"
-        icon="i-lucide-alert-circle"
-        title="Confirmation link expired or invalid"
-        description="Please try logging in, or sign up again to get a new confirmation email."
-      />
-      <UButton v-if="hasTimedOut" to="/login" label="Go to login" class="mt-4" />
-    </UContainer>
-  </div>
-</template>
+<template><div class="ff-page max-w-xl py-20 text-center"><template v-if="!timedOut"><UIcon name="i-lucide-loader-circle" class="size-9 animate-spin text-primary mb-5" /><h1 class="text-xl font-semibold">Confirmation du compte…</h1></template><template v-else><UAlert color="warning" title="Confirmation en attente" description="Essaie de te connecter." /><UButton :to="{ path: '/login', query: { redirect } }" label="Aller à la connexion" class="mt-5" /></template></div></template>

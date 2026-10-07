@@ -4,13 +4,14 @@ import type { ProgramExercise } from '~/utils/program-types'
 
 function renumberDays(schedule: EditableDay[]) {
   schedule.forEach((day, index) => {
-    day.day = `Day ${index + 1}`
+    day.day = `Séance ${index + 1}`
   })
 }
 
 export function useProgramEditor(schedule: Ref<EditableDay[]>) {
   function addDay() {
-    schedule.value.push({ day: '', focus: '', notes: '', exercises: [] })
+    if (schedule.value.length >= 14) return
+    schedule.value.push({ id: crypto.randomUUID(), day: '', focus: 'Ma séance', notes: '', exercises: [] })
     renumberDays(schedule.value)
   }
 
@@ -22,7 +23,7 @@ export function useProgramEditor(schedule: Ref<EditableDay[]>) {
   // Returns false (and adds nothing) if this exercise is already in that day.
   function addExercise(dayIndex: number, exercise: ProgramExercise): boolean {
     const day = schedule.value[dayIndex]
-    if (!day) return false
+    if (!day || day.exercises.length >= 30) return false
     if (day.exercises.some(ex => ex.name === exercise.name)) return false
     const editableExercise: EditableProgramExercise = { ...exercise, id: crypto.randomUUID() }
     day.exercises.push(editableExercise)
@@ -42,6 +43,7 @@ export function useProgramEditor(schedule: Ref<EditableDay[]>) {
     const targetIndex = direction === 'up' ? index - 1 : index + 1
     if (index === -1 || targetIndex < 0 || targetIndex >= day.exercises.length) return
     const [exercise] = day.exercises.splice(index, 1)
+    if (!exercise) return
     day.exercises.splice(targetIndex, 0, exercise)
   }
 

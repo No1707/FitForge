@@ -1,6 +1,7 @@
 export default defineNuxtConfig({
-  devtools: { enabled: true },
+  devtools: { enabled: false },
   modules: ['@nuxt/ui', '@nuxtjs/supabase'],
+  ui: { fonts: false },
   css: ['~/assets/css/main.css'],
   compatibilityDate: '2024-11-01',
   runtimeConfig: {
@@ -18,14 +19,16 @@ export default defineNuxtConfig({
     compatibilityVersion: 4
   },
   colorMode: {
-    preference: 'system',
+    preference: 'light',
     fallback: 'light'
   },
   app: {
     head: {
-      title: 'FitForge - Your Complete Exercise Library',
+      title: 'FitForge · Suivi de musculation',
+      htmlAttrs: { lang: 'fr' },
       meta: [
-        { name: 'description', content: 'Discover exercises, learn proper form, and build your custom workout program' }
+        { name: 'description', content: 'Crée tes programmes de musculation et enregistre les charges et répétitions de chaque séance.' },
+        { name: 'theme-color', content: '#252528' }
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' }

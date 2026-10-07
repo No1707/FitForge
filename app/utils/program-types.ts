@@ -10,9 +10,11 @@ export interface ProgramFormData {
   focusAreas: string[]
   excludeAreas: string[]
   additionalNotes: string
+  useAi?: boolean
 }
 
 export interface ProgramExercise {
+  exerciseId?: string
   name: string
   sets: number
   reps: string
@@ -20,6 +22,7 @@ export interface ProgramExercise {
 }
 
 export interface WorkoutDay {
+  id?: string
   day: string
   focus: string
   exercises: ProgramExercise[]
@@ -30,6 +33,15 @@ export interface GeneratedProgram {
   goal: string
   schedule: WorkoutDay[]
   tips: string[]
+  settings?: ProgramSettings
+}
+
+export interface ProgramSettings {
+  equipment: string[]
+  excludeAreas: string[]
+  experience: ProgramFormData['experience']
+  sessionDuration: number
+  daysPerWeek: number
 }
 
 export interface ClarificationQA {

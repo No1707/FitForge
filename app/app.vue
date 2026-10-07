@@ -1,133 +1,46 @@
 <script setup lang="ts">
-const isMenuOpen = ref(false)
+import { fr } from '@nuxt/ui/locale'
 const route = useRoute()
 const colorMode = useColorMode()
 const user = useSupabaseUser()
-
-const links = computed(() => [
-  { label: 'Home', to: '/', icon: 'i-lucide-home' },
-  { label: 'Exercises', to: '/exercises', icon: 'i-lucide-dumbbell' },
-  { label: 'Build Program', to: '/program', icon: 'i-lucide-clipboard-list' },
-  ...(user.value ? [{ label: 'My Programs', to: '/programs', icon: 'i-lucide-user-round' }] : [])
-])
-
-watch(() => route.path, () => {
-  isMenuOpen.value = false
-})
-
-function isLinkActive(to: string) {
-  return to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(`${to}/`)
+const { storageError } = useTrainingStore()
+const links = [
+  { label: 'Aujourd’hui', to: '/', icon: 'i-lucide-house' },
+  { label: 'Programmes', to: '/programs', icon: 'i-lucide-notebook-tabs' },
+  { label: 'Progression', to: '/progress', icon: 'i-lucide-chart-no-axes-combined' },
+  { label: 'Exercices', to: '/exercises', icon: 'i-lucide-dumbbell' }
+]
+function isActive(path: string) {
+  if (path === '/') return route.path === '/' || route.path === '/workout'
+  if (path === '/programs') return route.path.startsWith('/program')
+  return route.path.startsWith(path)
 }
-
-function toggleColorMode() {
-  colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
-}
+const pageLabel = computed(() => links.find(link => isActive(link.to))?.label || 'Mon compte')
+function toggleTheme() { colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark' }
 </script>
 
 <template>
-  <UApp :scroll-body="false">
-    <div class="min-h-screen flex flex-col bg-default">
-      <!-- Header -->
-      <header class="sticky top-0 z-50 border-b border-default bg-default/80 backdrop-blur">
-        <UContainer class="flex items-center justify-between h-16">
-          <NuxtLink to="/" class="flex items-center gap-2">
-            <UIcon name="i-lucide-anvil" class="size-6 text-primary" />
-            <span class="font-bold text-xl">FitForge</span>
-          </NuxtLink>
-
-          <nav class="hidden md:flex items-center gap-1">
-            <UButton
-              v-for="link in links"
-              :key="link.to"
-              :to="link.to"
-              :label="link.label"
-              :icon="link.icon"
-              :color="isLinkActive(link.to) ? 'primary' : 'neutral'"
-              :variant="isLinkActive(link.to) ? 'soft' : 'ghost'"
-            />
-          </nav>
-
-          <div class="flex items-center gap-2">
-            <ClientOnly>
-              <UButton
-                :icon="colorMode.value === 'dark' ? 'i-lucide-sun' : 'i-lucide-moon'"
-                color="neutral"
-                variant="ghost"
-                :aria-label="colorMode.value === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
-                @click="toggleColorMode"
-              />
-              <template #fallback>
-                <UButton icon="i-lucide-moon" color="neutral" variant="ghost" aria-label="Toggle color mode" />
-              </template>
-            </ClientOnly>
-            <ClientOnly>
-              <template v-if="user">
-                <AccountMenu />
-              </template>
-              <template v-else>
-                <UButton to="/login" label="Log in" color="neutral" variant="ghost" class="hidden sm:inline-flex" />
-                <UButton to="/program" label="Get Started" color="primary" class="hidden sm:inline-flex" />
-              </template>
-              <template #fallback>
-                <UButton to="/program" label="Get Started" color="primary" class="hidden sm:inline-flex" />
-              </template>
-            </ClientOnly>
-            <UButton
-              class="md:hidden"
-              :icon="isMenuOpen ? 'i-lucide-x' : 'i-lucide-menu'"
-              color="neutral"
-              variant="ghost"
-              aria-label="Toggle menu"
-              @click="isMenuOpen = !isMenuOpen"
-            />
-          </div>
-        </UContainer>
-
-        <!-- Mobile nav -->
-        <div v-if="isMenuOpen" class="md:hidden border-t border-default">
-          <UContainer class="py-3 flex flex-col gap-1">
-            <UButton
-              v-for="link in links"
-              :key="link.to"
-              :to="link.to"
-              :label="link.label"
-              :icon="link.icon"
-              block
-              class="justify-start"
-              :color="isLinkActive(link.to) ? 'primary' : 'neutral'"
-              :variant="isLinkActive(link.to) ? 'soft' : 'ghost'"
-            />
-          </UContainer>
+  <UApp :locale="fr" :scroll-body="false">
+    <div class="ff-shell">
+      <a href="#main-content" class="ff-skip">Aller au contenu</a>
+      <aside class="ff-sidebar">
+        <NuxtLink to="/" class="ff-brand"><span class="ff-brand-mark"><UIcon name="i-lucide-anvil" class="size-5" /></span>FitForge<span class="text-primary -ml-2">.</span></NuxtLink>
+        <nav class="ff-nav mt-12" aria-label="Navigation principale">
+          <NuxtLink v-for="link in links" :key="link.to" :to="link.to" :aria-current="isActive(link.to) ? 'page' : undefined"><UIcon :name="link.icon" class="size-5" />{{ link.label }}</NuxtLink>
+        </nav>
+        <div class="mt-auto pt-10">
+          <NuxtLink to="/privacy" class="block px-2 text-xs text-muted hover:underline">Données et confidentialité</NuxtLink>
         </div>
-      </header>
-
-      <!-- Main -->
-      <main class="flex-1">
-        <NuxtPage />
-      </main>
-
-      <!-- Footer -->
-      <footer class="border-t border-default mt-16">
-        <UContainer class="py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-anvil" class="size-5 text-primary" />
-            <span class="font-semibold">FitForge</span>
-          </div>
-          <p class="text-muted text-sm">
-            © {{ new Date().getFullYear() }} FitForge. Built for fitness enthusiasts.
-          </p>
-          <div class="flex gap-2">
-            <UButton
-              icon="i-simple-icons-github"
-              color="neutral"
-              variant="ghost"
-              to="https://github.com/No1707"
-              target="_blank"
-              aria-label="GitHub"
-            />
-          </div>
-        </UContainer>
-      </footer>
+      </aside>
+      <div class="ff-workspace">
+        <header class="ff-topbar">
+          <p class="text-sm font-medium text-highlighted">{{ pageLabel }}</p>
+          <div class="flex items-center gap-3"><ClientOnly><UButton :icon="colorMode.value === 'dark' ? 'i-lucide-sun' : 'i-lucide-moon'" color="neutral" variant="ghost" :aria-label="colorMode.value === 'dark' ? 'Activer le thème clair' : 'Activer le thème sombre'" @click="toggleTheme" /><AccountMenu v-if="user" /><UButton v-else to="/login" label="Se connecter" color="neutral" variant="outline" /></ClientOnly></div>
+        </header>
+        <header class="ff-mobile-header"><NuxtLink to="/" class="ff-brand"><span class="ff-brand-mark"><UIcon name="i-lucide-anvil" class="size-5" /></span>FitForge<span class="text-primary -ml-2">.</span></NuxtLink><div class="flex items-center gap-1"><ClientOnly><UButton :icon="colorMode.value === 'dark' ? 'i-lucide-sun' : 'i-lucide-moon'" color="neutral" variant="ghost" aria-label="Changer le thème" @click="toggleTheme" /><AccountMenu v-if="user" /><UButton v-else to="/login" label="Connexion" color="neutral" variant="ghost" /></ClientOnly></div></header>
+        <main id="main-content" tabindex="-1"><UAlert v-if="storageError" class="m-4" color="warning" icon="i-lucide-hard-drive" :description="storageError" /><NuxtPage :key="user?.sub || 'guest'" /></main>
+      </div>
+      <nav v-if="route.path !== '/workout'" class="ff-mobile-nav" aria-label="Navigation mobile"><NuxtLink v-for="link in links" :key="link.to" :to="link.to" :aria-current="isActive(link.to) ? 'page' : undefined"><UIcon :name="link.icon" class="size-5" />{{ link.label }}</NuxtLink></nav>
     </div>
   </UApp>
 </template>
